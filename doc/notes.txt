@@ -20,3 +20,6 @@ git commit
 cd ..
 git add rz-lib
 git commit ...
+
+git submodule add https://github.com/raumzeitt/wbuart32.git
+git submodule add https://github.com/raumzeitt/hyperbus.git
