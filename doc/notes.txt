@@ -23,3 +23,7 @@ git commit ...
 
 git submodule add https://github.com/raumzeitt/wbuart32.git
 git submodule add https://github.com/raumzeitt/hyperbus.git
+git submodule add git@github.com:raumzeitt/pulp-register_interface.git
+git submodule add git@github.com:raumzeitt/pulp_axi.git
+git submodule add git@github.com:raumzeitt/pulp-common_cells.git
+git submodule add git@github.com:raumzeitt/pulp-tech_cells_generic.git

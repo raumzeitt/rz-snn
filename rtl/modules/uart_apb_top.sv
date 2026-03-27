@@ -98,7 +98,7 @@ txuart #(
 
 // UART FSM
 
-always @(posedge clk)
+always @(posedge clk or negedge rst_n)
 if (~rst_n) 
     ustate      <= U_IDLE;
 else if (rx_valid)
@@ -119,7 +119,7 @@ end
 
 // APB Master FSM
 
-always @(posedge clk)
+always @(posedge clk or negedge rst_n)
 if (~rst_n)
     pstate  <= A_IDLE;
 else
