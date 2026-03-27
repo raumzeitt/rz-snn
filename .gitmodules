@@ -1,9 +1,12 @@
-[submodule "rtl/rz-lib"]
+[submodule "lib/rz-lib"]
 	path = lib/rz-lib
 	url = https://github.com/raumzeitt/rz-lib.git
-[submodule "rtl/wbuart32"]
+	branch = main
+[submodule "lib/wbuart32"]
 	path = lib/wbuart32
 	url = https://github.com/raumzeitt/wbuart32.git
-[submodule "rtl/hyperbus"]
+	branch = master
+[submodule "lib/hyperbus"]
 	path = lib/hyperbus
 	url = https://github.com/raumzeitt/hyperbus.git
+	branch = main

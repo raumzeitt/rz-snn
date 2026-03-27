@@ -1,0 +1,9 @@
+__pycache__
+obj_dir
+
+*.fst
+*.vcd
+modelsim.ini
+results.xml
+sim_build
+transcript

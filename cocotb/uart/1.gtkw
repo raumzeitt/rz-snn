@@ -1,0 +1,40 @@
+[*]
+[*] GTKWave Analyzer v3.3.104 (w)1999-2020 BSI
+[*] Fri Mar 27 01:16:18 2026
+[*]
+[dumpfile] "/home/rmetchev/workspace/rz-snn/cocotb/uart/dump.fst"
+[dumpfile_mtime] "Fri Mar 27 01:14:02 2026"
+[dumpfile_size] 533077
+[savefile] "/home/rmetchev/workspace/rz-snn/cocotb/uart/1.gtkw"
+[timestart] 0
+[size] 1826 832
+[pos] -90 -1
+*-28.677876 2156120001 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] uart_apb_top.
+[sst_width] 233
+[signals_width] 134
+[sst_expanded] 1
+[sst_vpaned_height] 225
+@28
+uart_apb_top.clk
+uart_apb_top.rst_n
+@200
+-
+@28
+uart_apb_top.uart_rx
+uart_apb_top.uart_tx
+@200
+-
+@28
+uart_apb_top.PENABLE
+uart_apb_top.PREADY
+uart_apb_top.PSEL
+uart_apb_top.PWRITE
+@22
+uart_apb_top.PADDR[7:0]
+uart_apb_top.PRDATA[7:0]
+uart_apb_top.PWDATA[7:0]
+@23
+uart_apb_top.u_tx.lcl_data[7:0]
+[pattern_trace] 1
+[pattern_trace] 0
