@@ -10,3 +10,15 @@
 	path = lib/hyperbus
 	url = https://github.com/raumzeitt/hyperbus.git
 	branch = main
+[submodule "lib/pulp-register_interface"]
+	path = lib/pulp-register_interface
+	url = git@github.com:raumzeitt/pulp-register_interface.git
+[submodule "lib/pulp_axi"]
+	path = lib/pulp_axi
+	url = git@github.com:raumzeitt/pulp_axi.git
+[submodule "lib/pulp-common_cells"]
+	path = lib/pulp-common_cells
+	url = git@github.com:raumzeitt/pulp-common_cells.git
+[submodule "lib/pulp-tech_cells_generic"]
+	path = lib/pulp-tech_cells_generic
+	url = git@github.com:raumzeitt/pulp-tech_cells_generic.git
