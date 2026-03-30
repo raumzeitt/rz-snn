@@ -4,6 +4,7 @@ from cocotb.triggers import ClockCycles, RisingEdge, FallingEdge, Timer,  First,
 
 from cocotbext.uart import UartSource, UartSink
 from cocotbext.apb import ApbBus, ApbRam
+from cocotbext.axi import AxiBus, AxiMaster
 
 import sys, os, time, random, logging
 
@@ -42,8 +43,13 @@ class ApbRamTransactor:
             dut.rst_n,
             reset_active_level=False,  # if active-low
         )
-        apb.log.setLevel(self.dut._log.level)
 
+
+class AxiTransactor:
+    def __init__(self, dut):
+        self.axi_master = AxiMaster(AxiBus.from_prefix(dut, "axi"), dut.clk, dut.rst_n, reset_active_level=False)
+
+    
 class UartTransactor:
     def __init__(self, dut):
         self.dut = dut
@@ -74,6 +80,9 @@ class UartTransactor:
         self.log.info(f"UART READ:  ADDRESS=0x{address:02x} DATA=0x{data:02x}")
         return data
 
+    async def wr32(self, address, data):
+        for i in range(4):
+            await self.uart_write(address + i, (data>>(8*i)) & 0xff)
 
 @cocotb.test()
 async def uart_test(dut):
@@ -84,32 +93,99 @@ async def uart_test(dut):
     dut.rst_n.value = 1
     await Timer(1, 'ps')
 
-    # Transactor
+    # Transactors
     u = UartTransactor(dut)
-    p = ApbRamTransactor(dut)
+    #p = ApbRamTransactor(dut)
+    x = AxiTransactor(dut.hyperbus_fpga_top)
 
-    # 5 us reset
+    # 100MHz clock + 5 us reset
     cr = cocotb.start_soon(clock_n_reset(dut.clk, dut.rst_n, f=100e6, t=5))       
     await RisingEdge(dut.rst_n)
-    # wait n=16 periods of baud clock
+
+    # wait n=16 periods of baud clock (UART needs that)
     await Timer(17 * 8680, 'ns')
     
-    # test Command
-    if 1:
-        await u.uart_cmd(0x55) # 01010101 LSB first = 0_10101010_1
-        await u.uart_cmd(0x00)
-        await u.uart_cmd(0x3)
-        await Timer(25, 'us')
+    # Basic test
+    if 0:
+        # 1. read all addresses
+        for a in range(64):
+            r = await u.uart_read(a)
 
-    # test single byte write followed by byte read
-    if 2:
-        data = [(0x3, 53), (0, 255), (0x33, 0x44), (0x11, 0xcc), (0xdd, 0xa5)]
-        random.shuffle(data)
-        for d in data:
-            await u.uart_write(d[0], d[1])
-        random.shuffle(data)
-        for d in data:
-            read_bytes = await u.uart_read(d[0])
-            assert read_bytes == d[1]
-        await Timer(25, 'us')
+        # 2. write all addresses
+        for a in range(64):
+            await u.uart_write(a, 255)
 
+        # 3. read all addresses
+        for a in range(64):
+            r = await u.uart_read(a)
+
+        await Timer(1, 'ms')
+
+    # Basic test from ETH
+    # --- RESET / WAIT ---
+    # --- CONFIG (APB) ---
+    await u.wr32(0x00, 0x00000006)   # 0x0 *4  T_LATENCY_ACCESS
+    await u.wr32(0x04, 0x00000001)   # 0x1 *4  EN_LATENCY_ADDITIONAL
+    #await u.wr32(0x10, 0x00000006)   # 0x4 *4  T_RX_CLK_DELAY
+    #await u.wr32(0x14, 0x00000000)   # 0x5 *4  T_TX_CLK_DELAY
+    # --- CRANGE ---
+    await u.wr32(0x2c, 0x00000000)   # 0xB *4  CRANGE0_START
+    await u.wr32(0x30, 0x00FFFFFF)   # 0xC *4  CRANGE0_END
+    #await u.wr32(0x34, 0x01000000)   # 0xD *4  CRANGE1_START
+    #await u.wr32(0x38, 0x01FFFFFF)   # 0xE *4  CRANGE1_END
+
+    # --- REGISTER SPACE ---
+    await u.wr32(0x1C, 0x00000001)   # 0x7 *4  ADDRESS_SPACE = 1
+
+    #data = await x.axi_master.read(0x00000000, length=1, size=1 , prot=0)
+    r = cocotb.start_soon(x.axi_master.read(0x00000000, length=1, size=1 , prot=0))
+    t = Timer(25, 'us')
+    res = await First(t, r)
+    if res is t:
+        raise TimeoutError("AXI read timeout")
+    data = r.result()
+
+
+
+
+
+    # --- READ MR0 ---
+    #mr0_chip0 = await axi_read(dut, 0x00000000)
+    #mr0_chip1 = await axi_read(dut, 0x01000000)
+
+    #print("MR0 CHIP0 =", hex(mr0_chip0))
+    #print("MR0 CHIP1 =", hex(mr0_chip1))
+
+    # --- BACK TO MEMORY ---
+    #await apb_write(dut, 0x0000001C, 0x00000000)
+
+
+    #await apb_write(dut, 0x00, 0x00000000)   # CRANGE0_START
+    #await apb_write(dut, 0x04, 0x00FFFFFF)   # CRANGE0_END
+
+    #await apb_write(dut, 0x38, 0x6)          # T_LATENCY_ACCESS = 6
+    #await apb_write(dut, 0x34, 0x0)          # EN_LATENCY_ADDITIONAL = 0
+
+    #await apb_write(dut, 0x24, 0x0)          # T_TX_CLK_DELAY
+    #await apb_write(dut, 0x28, 0x6)          # T_RX_CLK_DELAY (start)
+
+    #await apb_write(dut, 0x2C, 0x8)          # T_RW_RECOVERY
+    #await apb_write(dut, 0x30, 0x10)         # T_BURST_MAX
+
+    # --- READ MR0 ---
+    #await apb_write(dut, 0x1C, 0x1)          # ADDRESS_SPACE = register
+    #mr0 = await axi_read(dut, 0x0)           # MR0
+    #print("MR0 =", hex(mr0))
+    #await apb_write(dut, 0x1C, 0x0)          # ADDRESS_SPACE = memory
+
+    # --- FIRST MEMORY TEST ---
+    #await axi_write(dut, 0x0, 0xA5A5A5A5)
+    #r = await axi_read(dut, 0x0)
+    #print("READ0 =", hex(r))
+    #assert r == 0xA5A5A5A5
+
+    # --- SECOND ADDRESS TEST ---
+    #await axi_write(dut, 0x4, 0x12345678)
+    #r = await axi_read(dut, 0x4)
+    #print("READ4 =", hex(r))
+    #assert r == 0x12345678

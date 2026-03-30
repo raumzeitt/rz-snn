@@ -5,6 +5,11 @@ SIM ?= verilator
 export SIM := $(SIM)
 TOPLEVEL_LANG ?= verilog
 
+# Xilinx tools
+# Env variable: XILINX_VIVADO=/tools/Xilinx/Vivado/2023.2
+# make sure XILINX_VIVADO is set
+XILINX_UNISIMS = $(XILINX_VIVADO)/data/verilog/src/unisims
+
 export COCOTB_RESOLVE_X := ZEROS
 
 VERILOG_SOURCES += \
@@ -60,19 +65,45 @@ VERILOG_SOURCES += \
 VERILOG_SOURCES += \
         $(realpath ./hyperbus_tb.sv)
 
-#includes!
+# Download sim model from:
+# "https://www.infineon.com/assets/row/public/documents/10/50/infineon-s27kl0641-s27ks0641-verilog-simulationmodels-en.zip"
+# or
+# https://www.infineon.com/gated/infineon-s27kl0641-s27ks0641-verilog-simulationmodels-en_2a2bc13c-621c-436e-ab1b-e58c9bdb449c
+# old link from PULP HyperBus Makefile no longer works
+
+VERILOG_SOURCES += \
+        002-32555/hbus/s80ks5122.v \
+
+        #S27KL0641_S27KS0641/S27kl0641/model/s27kl0641.v \
+
+# Xilinx primitives      
+VERILOG_SOURCES += \
+        $(XILINX_VIVADO)/data/verilog/src/glbl.v \
+        $(XILINX_UNISIMS)/IOBUF.v \
+        $(XILINX_UNISIMS)/OBUF.v \
+        $(XILINX_UNISIMS)/IBUF.v \
+
+
+#include directories
 VERILOG_INCLUDE_DIRS += \
         ../../lib/pulp_axi/include/ \
         ../../lib/pulp-register_interface/include/ \
         ../../lib/pulp-common_cells/include/
 
+
+# Defines section
+COMMON_DEFINES += \
+        GLBL_INSTANCE \
+
 ifeq ($(SIM),icarus)
+        COMPILE_ARGS += $(COMMON_DEFINES:%=-D%)
         COMPILE_ARGS += -Wall
         COMPILE_ARGS += -v
         #COMPILE_ARGS += -g2005-sv
         COMPILE_ARGS += -DCOMMON_CELLS_ASSERTS_OFF
 endif
 ifeq ($(SIM),verilator)
+        EXTRA_ARGS += $(COMMON_DEFINES:%=+define+%)
         EXTRA_ARGS += --timing
         ifneq ($(WAVES),0)
                 EXTRA_ARGS += --trace --trace-structs --trace-fst
@@ -83,7 +114,7 @@ ifeq ($(SIM),verilator)
         EXTRA_ARGS += +define+COMMON_CELLS_ASSERTS_OFF
 
         EXTRA_ARGS += -Wno-fatal
-
+        #EXTRA_ARGS += --trace
 endif
 
 # TOPLEVEL is the name of the toplevel module in your Verilog or VHDL file

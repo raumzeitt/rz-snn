@@ -1,0 +1,84 @@
+[*]
+[*] GTKWave Analyzer v3.3.104 (w)1999-2020 BSI
+[*] Mon Mar 30 21:50:03 2026
+[*]
+[dumpfile] "/home/rmetchev/workspace/rz-snn/cocotb/hyperbus/dump.fst"
+[dumpfile_mtime] "Mon Mar 30 21:46:47 2026"
+[dumpfile_size] 1273776
+[savefile] "/home/rmetchev/workspace/rz-snn/cocotb/hyperbus/1.gtkw"
+[timestart] 5341560000
+[size] 1850 1016
+[pos] -100 -24
+*-21.226917 5355695001 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] hyperbus_tb.
+[treeopen] hyperbus_tb.hyperbus_fpga_top.
+[sst_width] 233
+[signals_width] 174
+[sst_expanded] 1
+[sst_vpaned_height] 346
+@28
+hyperbus_tb.hyperbus_fpga_top.uart_rx
+hyperbus_tb.hyperbus_fpga_top.uart_tx
+@200
+-
+@c00024
+hyperbus_tb.hyperbus_fpga_top.PADDR[7:0]
+@28
+(0)hyperbus_tb.hyperbus_fpga_top.PADDR[7:0]
+(1)hyperbus_tb.hyperbus_fpga_top.PADDR[7:0]
+(2)hyperbus_tb.hyperbus_fpga_top.PADDR[7:0]
+(3)hyperbus_tb.hyperbus_fpga_top.PADDR[7:0]
+(4)hyperbus_tb.hyperbus_fpga_top.PADDR[7:0]
+(5)hyperbus_tb.hyperbus_fpga_top.PADDR[7:0]
+(6)hyperbus_tb.hyperbus_fpga_top.PADDR[7:0]
+(7)hyperbus_tb.hyperbus_fpga_top.PADDR[7:0]
+@1401200
+-group_end
+@28
+hyperbus_tb.hyperbus_fpga_top.PENABLE
+@22
+hyperbus_tb.hyperbus_fpga_top.PRDATA[7:0]
+@28
+hyperbus_tb.hyperbus_fpga_top.PREADY
+hyperbus_tb.hyperbus_fpga_top.PSEL
+@22
+hyperbus_tb.hyperbus_fpga_top.PWDATA[7:0]
+@28
+hyperbus_tb.hyperbus_fpga_top.PWRITE
+@200
+-
+@c00028
+hyperbus_tb.hyperbus_fpga_top.local_psel[1:0]
+@28
+(0)hyperbus_tb.hyperbus_fpga_top.local_psel[1:0]
+(1)hyperbus_tb.hyperbus_fpga_top.local_psel[1:0]
+@200
+-
+@1401200
+-group_end
+@200
+-
+@22
+hyperbus_tb.hyperbus_fpga_top.axi_araddr[31:0]
+@28
+hyperbus_tb.hyperbus_fpga_top.axi_arready
+@29
+hyperbus_tb.hyperbus_fpga_top.axi_arvalid
+@200
+-
+@28
+hyperbus_tb.hyperbus_fpga_top.pad_hyper_ck
+hyperbus_tb.hyperbus_fpga_top.pad_hyper_ckn
+@800028
+hyperbus_tb.hyperbus_fpga_top.pad_hyper_csn[1:0]
+@28
+(0)hyperbus_tb.hyperbus_fpga_top.pad_hyper_csn[1:0]
+(1)hyperbus_tb.hyperbus_fpga_top.pad_hyper_csn[1:0]
+@1001200
+-group_end
+@22
+hyperbus_tb.hyperbus_fpga_top.pad_hyper_dq[7:0]
+@28
+hyperbus_tb.hyperbus_fpga_top.pad_hyper_rwds
+[pattern_trace] 1
+[pattern_trace] 0

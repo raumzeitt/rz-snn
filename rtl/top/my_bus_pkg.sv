@@ -10,8 +10,8 @@ package my_bus_pkg;
 
     // ---- AXI ----
     parameter int AxiAddrWidth = 32; // from PULP tb
-    parameter int AxiDataWidth = 64;
-    parameter int AxiIdWidth   = 6;
+    parameter int AxiDataWidth = 32; // default for 32-bit RV
+    parameter int AxiIdWidth   = 6; // ignore. hardcode ID to 0
     parameter int AxiUserWidth = 1;
 
     typedef logic [AxiAddrWidth-1:0] addr_t;
