@@ -3,7 +3,7 @@ from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles, RisingEdge, FallingEdge, Timer,  First, Edge, Combine
 
 from cocotbext.uart import UartSource, UartSink
-from cocotbext.apb import ApbBus, ApbRam
+from cocotbext.apb import ApbBus, ApbRam, ApbMaster
 from cocotbext.axi import AxiBus, AxiMaster
 
 import sys, os, time, random, logging
@@ -27,7 +27,7 @@ async def clock_n_reset(c, r, f=0, n=5, t=10):
         r.value = 1
 
 
-class ApbRamTransactor:
+class ApbTransactor:
     def __init__(self, dut):
         self.dut = dut
         # alias signals
@@ -37,12 +37,13 @@ class ApbRamTransactor:
             "",   # no prefix
             signals=signals
         )
-        apb = ApbRam(
-            apb_bus,
-            dut.clk,
-            dut.rst_n,
-            reset_active_level=False,  # if active-low
-        )
+        self.apb_master = ApbMaster(apb_bus, dut.clk)
+        #apb_ram = ApbRam(
+        #    apb_bus,
+        #    dut.clk,
+        #    dut.rst_n,
+        #    reset_active_level=False,  # if active-low
+        #)
 
 
 class AxiTransactor:
@@ -95,7 +96,7 @@ async def uart_test(dut):
 
     # Transactors
     u = UartTransactor(dut)
-    #p = ApbRamTransactor(dut)
+    p = ApbTransactor(dut.hyperbus_fpga_top)
     x = AxiTransactor(dut.hyperbus_fpga_top)
 
     # 100MHz clock + 5 us reset
