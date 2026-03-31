@@ -7,6 +7,7 @@ from cocotbext.apb import ApbBus, ApbRam, ApbMaster
 from cocotbext.axi import AxiBus, AxiMaster
 
 import sys, os, time, random, logging
+from struct import unpack
 
 # pip install cocotbext-uart
 # 2.0  - pip install cocotbext-axi
@@ -138,13 +139,22 @@ async def uart_test(dut):
     # --- REGISTER SPACE ---
     await u.wr32(0x1C, 0x00000001)   # 0x7 *4  ADDRESS_SPACE = 1
 
-    #data = await x.axi_master.read(0x00000000, length=1, size=1 , prot=0)
-    r = cocotb.start_soon(x.axi_master.read(0x00000000, length=1, size=1 , prot=0))
+
+    # size=2 -> bytes in word = 2^size = 4
+    # length = 4 = 4 bytes -> words = length in bytes / bytes per word = 4/4 = 1 words
+    r = cocotb.start_soon(x.axi_master.read(0x00000000, length=4, size=2 , prot=0))
     t = Timer(25, 'us')
     res = await First(t, r)
     if res is t:
         raise TimeoutError("AXI read timeout")
-    data = r.result()
+    data = res.data
+    await Timer(1, 'us')
+
+    data_lst = list(unpack(f'<{len(data)//4}I', data))
+    data_str = [f'0x{i:08x}' for i in data_lst]
+
+    dut._log.info(f"AXI read: RDATA={' '.join(data_str)}")
+    await Timer(5, 'us')
 
 
 
