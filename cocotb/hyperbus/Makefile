@@ -66,12 +66,12 @@ VERILOG_SOURCES += \
         $(realpath ./hyperbus_tb.sv)
 
 # Download sim model from:
-# "https://www.infineon.com/assets/row/public/documents/10/50/infineon-s27kl0641-s27ks0641-verilog-simulationmodels-en.zip"
-# or
-# https://www.infineon.com/gated/infineon-s27kl0641-s27ks0641-verilog-simulationmodels-en_2a2bc13c-621c-436e-ab1b-e58c9bdb449c
+# https://www.infineon.com/assets/row/public/documents/10/50/infineon-s27kl0641-s27ks0641-verilog-simulationmodels-en.zip
+# https://www.infineon.com/gated/infineon-verilog-model-for-hyperbus-interface-simulationmodels-en_bbc7fc83-6f5a-4731-bf16-e31ebffc63e0or
 # old link from PULP HyperBus Makefile no longer works
 
-VERILOG_SOURCES += s80ks5122.verilator.v
+VERILOG_SOURCES += \
+        s80ks5122.verilator.v
 
         #002-32555/hbus/s80ks5122.v \
         #S27KL0641_S27KS0641/S27kl0641/model/s27kl0641.v \
