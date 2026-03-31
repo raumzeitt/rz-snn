@@ -71,9 +71,9 @@ VERILOG_SOURCES += \
 # https://www.infineon.com/gated/infineon-s27kl0641-s27ks0641-verilog-simulationmodels-en_2a2bc13c-621c-436e-ab1b-e58c9bdb449c
 # old link from PULP HyperBus Makefile no longer works
 
-VERILOG_SOURCES += \
-        002-32555/hbus/s80ks5122.v \
+VERILOG_SOURCES += s80ks5122.verilator.v
 
+        #002-32555/hbus/s80ks5122.v \
         #S27KL0641_S27KS0641/S27kl0641/model/s27kl0641.v \
 
 # Xilinx primitives      
@@ -114,6 +114,7 @@ ifeq ($(SIM),verilator)
         EXTRA_ARGS += +define+COMMON_CELLS_ASSERTS_OFF
 
         EXTRA_ARGS += -Wno-fatal
+        EXTRA_ARGS += -DVM_TIMING=0
         #EXTRA_ARGS += --trace
 endif
 

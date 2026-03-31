@@ -22,5 +22,24 @@ wire            pad_hyper_rwds;
 wire [7:0]      pad_hyper_dq;
 
 hyperbus_fpga_top hyperbus_fpga_top(.*);
-//s80ks5122 s80ks5122 ( );
+
+generate
+for (genvar i=0; i<2;i=i+1) begin: s80ks5122
+s80ks5122 s80ks5122 (
+    .DQ7(pad_hyper_dq[7]),
+    .DQ6(pad_hyper_dq[6]),
+    .DQ5(pad_hyper_dq[5]),
+    .DQ4(pad_hyper_dq[4]),
+    .DQ3(pad_hyper_dq[3]),
+    .DQ2(pad_hyper_dq[2]),
+    .DQ1(pad_hyper_dq[1]),
+    .DQ0(pad_hyper_dq[0]),
+    .RWDS(pad_hyper_rwds),
+    .CSNeg(pad_hyper_csn[i]),
+    .CK(pad_hyper_ck),
+    .CKn(pad_hyper_ckn),
+    .RESETNeg(pad_hyper_reset_n)
+);
+end
+endgenerate
 endmodule

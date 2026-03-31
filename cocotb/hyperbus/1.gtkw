@@ -1,19 +1,21 @@
 [*]
 [*] GTKWave Analyzer v3.3.104 (w)1999-2020 BSI
-[*] Mon Mar 30 21:50:03 2026
+[*] Tue Mar 31 06:28:06 2026
 [*]
 [dumpfile] "/home/rmetchev/workspace/rz-snn/cocotb/hyperbus/dump.fst"
-[dumpfile_mtime] "Mon Mar 30 21:46:47 2026"
-[dumpfile_size] 1273776
+[dumpfile_mtime] "Tue Mar 31 06:25:36 2026"
+[dumpfile_size] 1556535
 [savefile] "/home/rmetchev/workspace/rz-snn/cocotb/hyperbus/1.gtkw"
-[timestart] 5341560000
+[timestart] 6396981500
 [size] 1850 1016
-[pos] -100 -24
-*-21.226917 5355695001 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[pos] -1 -1
+*-17.528107 6397610000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] hyperbus_tb.
 [treeopen] hyperbus_tb.hyperbus_fpga_top.
+[treeopen] hyperbus_tb.s80ks5122[0].s80ks5122.
+[treeopen] hyperbus_tb.s80ks5122[0].s80ks5122.bottom.
 [sst_width] 233
-[signals_width] 174
+[signals_width] 238
 [sst_expanded] 1
 [sst_vpaned_height] 346
 @28
@@ -62,23 +64,22 @@ hyperbus_tb.hyperbus_fpga_top.local_psel[1:0]
 hyperbus_tb.hyperbus_fpga_top.axi_araddr[31:0]
 @28
 hyperbus_tb.hyperbus_fpga_top.axi_arready
-@29
 hyperbus_tb.hyperbus_fpga_top.axi_arvalid
 @200
 -
 @28
-hyperbus_tb.hyperbus_fpga_top.pad_hyper_ck
-hyperbus_tb.hyperbus_fpga_top.pad_hyper_ckn
-@800028
-hyperbus_tb.hyperbus_fpga_top.pad_hyper_csn[1:0]
-@28
-(0)hyperbus_tb.hyperbus_fpga_top.pad_hyper_csn[1:0]
-(1)hyperbus_tb.hyperbus_fpga_top.pad_hyper_csn[1:0]
-@1001200
--group_end
-@22
-hyperbus_tb.hyperbus_fpga_top.pad_hyper_dq[7:0]
-@28
-hyperbus_tb.hyperbus_fpga_top.pad_hyper_rwds
+hyperbus_tb.s80ks5122[0].s80ks5122.CK
+hyperbus_tb.s80ks5122[0].s80ks5122.CKn
+hyperbus_tb.s80ks5122[0].s80ks5122.CSNeg
+hyperbus_tb.s80ks5122[0].s80ks5122.DQ0
+hyperbus_tb.s80ks5122[0].s80ks5122.DQ1
+hyperbus_tb.s80ks5122[0].s80ks5122.DQ2
+hyperbus_tb.s80ks5122[0].s80ks5122.DQ3
+hyperbus_tb.s80ks5122[0].s80ks5122.DQ4
+hyperbus_tb.s80ks5122[0].s80ks5122.DQ5
+hyperbus_tb.s80ks5122[0].s80ks5122.DQ6
+hyperbus_tb.s80ks5122[0].s80ks5122.DQ7
+hyperbus_tb.s80ks5122[0].s80ks5122.RESETNeg
+hyperbus_tb.s80ks5122[0].s80ks5122.RWDS
 [pattern_trace] 1
 [pattern_trace] 0

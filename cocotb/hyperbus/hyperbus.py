@@ -124,7 +124,7 @@ async def uart_test(dut):
     # Basic test from ETH
     # --- RESET / WAIT ---
     # --- CONFIG (APB) ---
-    await u.wr32(0x00, 0x00000006)   # 0x0 *4  T_LATENCY_ACCESS
+    await u.wr32(0x00, 0x00000008)   # 0x0 *4  T_LATENCY_ACCESS
     await u.wr32(0x04, 0x00000001)   # 0x1 *4  EN_LATENCY_ADDITIONAL
     #await u.wr32(0x10, 0x00000006)   # 0x4 *4  T_RX_CLK_DELAY
     #await u.wr32(0x14, 0x00000000)   # 0x5 *4  T_TX_CLK_DELAY
