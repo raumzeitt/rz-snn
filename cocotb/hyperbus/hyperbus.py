@@ -126,8 +126,8 @@ async def uart_test(dut):
     # Basic test from ETH
     # --- RESET / WAIT ---
     # --- CONFIG (APB) ---
-    await u.wr32(0x00, 0x00000008)   # 0x0 *4  T_LATENCY_ACCESS
-    await u.wr32(0x04, 0x00000001)   # 0x1 *4  EN_LATENCY_ADDITIONAL
+    await u.wr32(0x00, 0x00000007)   # 0x0 *4  T_LATENCY_ACCESS - 7 @ 200MHz
+    #await u.wr32(0x04, 0x00000000)   # 0x1 *4  EN_LATENCY_ADDITIONAL - no need
     #await u.wr32(0x10, 0x00000006)   # 0x4 *4  T_RX_CLK_DELAY
     #await u.wr32(0x14, 0x00000000)   # 0x5 *4  T_TX_CLK_DELAY
     # --- CRANGE ---
@@ -142,7 +142,7 @@ async def uart_test(dut):
 
     # size=2 -> bytes in word = 2^size = 4
     # length = 4 = 4 bytes -> words = length in bytes / bytes per word = 4/4 = 1 words
-    r = cocotb.start_soon(x.axi_master.read(0x00000000, length=4, size=2 , prot=0))
+    r = cocotb.start_soon(x.axi_master.read(0x00000000, length=8, size=2 , prot=0))
     t = Timer(25, 'us')
     res = await First(t, r)
     if res is t:
