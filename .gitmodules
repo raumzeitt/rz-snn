@@ -1,14 +1,14 @@
 [submodule "lib/rz-lib"]
 	path = lib/rz-lib
-	url = https://github.com/raumzeitt/rz-lib.git
+	url = git@github.com:raumzeitt/rz-lib.git
 	branch = main
 [submodule "lib/wbuart32"]
 	path = lib/wbuart32
-	url = https://github.com/raumzeitt/wbuart32.git
+	url = git@github.com:raumzeitt/wbuart32.git
 	branch = master
 [submodule "lib/hyperbus"]
 	path = lib/hyperbus
-	url = https://github.com/raumzeitt/hyperbus.git
+	url = git@github.com:raumzeitt/hyperbus.git
 	branch = main
 [submodule "lib/pulp-register_interface"]
 	path = lib/pulp-register_interface
