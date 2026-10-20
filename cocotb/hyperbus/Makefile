@@ -13,7 +13,8 @@ XILINX_UNISIMS = $(XILINX_VIVADO)/data/verilog/src/unisims
 export COCOTB_RESOLVE_X := ZEROS
 
 VERILOG_SOURCES += \
-        $(realpath ../../lib/pulp-common_cells/src/cf_math_pkg.sv) \
+        $(realpath ../../lib/pulp-common_cells/src/cc_pkg.sv) \
+        $(realpath ../../lib/pulp-common_cells/src/deprecated/cf_math_pkg.sv) \
         $(realpath ../../lib/hyperbus/src/hyperbus_pkg.sv) \
         $(realpath ../../lib/pulp_axi/src/axi_pkg.sv) \
         $(realpath ../../rtl/top/my_bus_pkg.sv) \
@@ -40,19 +41,33 @@ VERILOG_SOURCES += \
 
 VERILOG_SOURCES += \
         ../../lib/pulp-tech_cells_generic/src/rtl/tc_clk.sv \
-        ../../lib/pulp-common_cells/src/cdc_fifo_gray.sv \
-        ../../lib/pulp-common_cells/src/cdc_2phase.sv \
-        ../../lib/pulp-common_cells/src/binary_to_gray.sv \
-        ../../lib/pulp-common_cells/src/gray_to_binary.sv \
-        ../../lib/pulp-common_cells/src/sync.sv \
-        ../../lib/pulp-common_cells/src/spill_register.sv \
-        ../../lib/pulp-common_cells/src/spill_register_flushable.sv \
-        ../../lib/pulp-common_cells/src/fifo_v3.sv \
-        ../../lib/pulp-common_cells/src/stream_register.sv \
-        ../../lib/pulp-common_cells/src/stream_fifo.sv \
-        ../../lib/pulp-common_cells/src/rr_arb_tree.sv \
-        ../../lib/pulp-common_cells/src/addr_decode.sv \
-        ../../lib/pulp-common_cells/src/addr_decode_dync.sv \
+        ../../lib/pulp-tech_cells_generic/src/rtl/tc_sync.sv \
+        ../../lib/pulp-common_cells/src/cc_addr_decode.sv \
+        ../../lib/pulp-common_cells/src/cc_addr_decode_dync.sv \
+        ../../lib/pulp-common_cells/src/cc_binary_to_gray.sv \
+        ../../lib/pulp-common_cells/src/cc_cdc_2phase.sv \
+        ../../lib/pulp-common_cells/src/cc_cdc_fifo_gray.sv \
+        ../../lib/pulp-common_cells/src/cc_fifo.sv \
+        ../../lib/pulp-common_cells/src/cc_gray_to_binary.sv \
+        ../../lib/pulp-common_cells/src/cc_lzc.sv \
+        ../../lib/pulp-common_cells/src/cc_rr_arb_tree.sv \
+        ../../lib/pulp-common_cells/src/cc_spill_register.sv \
+        ../../lib/pulp-common_cells/src/cc_spill_register_flushable.sv \
+        ../../lib/pulp-common_cells/src/cc_stream_fifo.sv \
+        ../../lib/pulp-common_cells/src/cc_stream_register.sv \
+        ../../lib/pulp-common_cells/src/deprecated/cdc_fifo_gray.sv \
+        ../../lib/pulp-common_cells/src/deprecated/cdc_2phase.sv \
+        ../../lib/pulp-common_cells/src/deprecated/binary_to_gray.sv \
+        ../../lib/pulp-common_cells/src/deprecated/gray_to_binary.sv \
+        ../../lib/pulp-common_cells/src/deprecated/sync.sv \
+        ../../lib/pulp-common_cells/src/deprecated/spill_register.sv \
+        ../../lib/pulp-common_cells/src/deprecated/spill_register_flushable.sv \
+        ../../lib/pulp-common_cells/src/deprecated/fifo_v3.sv \
+        ../../lib/pulp-common_cells/src/deprecated/stream_register.sv \
+        ../../lib/pulp-common_cells/src/deprecated/stream_fifo.sv \
+        ../../lib/pulp-common_cells/src/deprecated/rr_arb_tree.sv \
+        ../../lib/pulp-common_cells/src/deprecated/addr_decode.sv \
+        ../../lib/pulp-common_cells/src/deprecated/addr_decode_dync.sv \
         ../../lib/pulp_axi/src/axi_atop_filter.sv \
         ../../lib/pulp_axi/src/axi_fifo.sv \
         ../../lib/pulp_axi/src/axi_serializer.sv \
