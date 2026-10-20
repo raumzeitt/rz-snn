@@ -4,6 +4,6 @@ obj_dir
 *.fst
 *.vcd
 modelsim.ini
-results.xml
+results*.xml
 sim_build
 transcript
