@@ -322,6 +322,7 @@ hyperbus #(
     // AXI types (from macros)
     .axi_req_t(axi_req_t),
     .axi_rsp_t(axi_resp_t),
+    .axi_rule_t(axi_pkg::xbar_rule_32_t),
     .axi_aw_chan_t(axi_aw_chan_t),
     .axi_w_chan_t(axi_w_chan_t),
     .axi_b_chan_t(axi_b_chan_t),
