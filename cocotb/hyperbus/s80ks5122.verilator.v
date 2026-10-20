@@ -1,3 +1,4 @@
+// Adapted from s80ks5122.v: explicit output enables for Verilator.
 ///////////////////////////////////////////////////////////////////////////////
 //  File name : s80ks5122.v
 ///////////////////////////////////////////////////////////////////////////////
@@ -222,13 +223,6 @@ module hram_256mb
 	input  CKn;
     input  RESETNeg;
 
-    // hack for verilator
-    typedef enum logic [1:0] {
-        _0 = 2'b00,
-        _1 = 2'b01,
-        _Z = 2'b10
-    } tri_t;  
-
     // interconnect path delay signals
     wire CSNeg_ipd;
     wire CK_ipd;
@@ -315,24 +309,44 @@ module hram_256mb
     reg glitch_rwdsR = 1'b0;
     reg Viol = 1'b0;
 
-    tri_t [7:0] Dout_zd = {8{_Z}};// = 8'bzzzzzzzz;
-    tri_t [7:0] Dout_zdp = {8{_Z}};// = 8'bzzzzzzzz;
-    tri_t [7:0] Dout_zdn = {8{_Z}};// = 8'bzzzzzzzz;
-    tri_t RWDSout_zd = _Z;// = 1'bz;
-    tri_t RWDS_zdp = _Z;// = 1'bz;
-    tri_t RWDS_zdn = _Z;// = 1'bz;
+    /*
+    reg [7:0] Dout_zd = 8'bzzzzzzzz;
+    reg [7:0] Dout_zdp = 8'bzzzzzzzz;
+    reg [7:0] Dout_zdn = 8'bzzzzzzzz;
+    reg RWDSout_zd = 1'bz;
+    reg RWDS_zdp = 1'bz;
+    reg RWDS_zdn = 1'bz;
+    */
+
+    // Keep bus release as an explicit enable rather than an internal Z value.
+    typedef struct packed { logic enable; logic [7:0] data; } dq_output_t;
+    typedef struct packed { logic enable; logic data; } rwds_output_t;
+
+    // A disabled output releases the pin; the data field is ignored.
+    localparam dq_output_t DQ_RELEASED = '{enable: 0, data: 8'b0};
+    localparam rwds_output_t RWDS_RELEASED = '{enable: 0, data: 1'b0};
+    localparam rwds_output_t RWDS_0 = '{enable: 1, data: 1'b0};
+    localparam rwds_output_t RWDS_1 = '{enable: 1, data: 1'b1};
+
+    dq_output_t Dout_zd = DQ_RELEASED;
+    dq_output_t Dout_zdp = DQ_RELEASED;
+    dq_output_t Dout_zdn = DQ_RELEASED;
+    rwds_output_t RWDSout_zd = RWDS_RELEASED;
+    rwds_output_t RWDS_zdp = RWDS_RELEASED;
+    rwds_output_t RWDS_zdn = RWDS_RELEASED;
 
 	reg DQp_latch = 1'b0;
 	reg DQn_latch = 1'b0;
 	
-    tri_t  DQ7_zd   ;
-    tri_t  DQ6_zd   ;
-    tri_t  DQ5_zd   ;
-    tri_t  DQ4_zd   ;
-    tri_t  DQ3_zd   ;
-    tri_t  DQ2_zd   ;
-    tri_t  DQ1_zd   ;
-    tri_t  DQ0_zd   ;
+    /*
+    wire  DQ7_zd   ;
+    wire  DQ6_zd   ;
+    wire  DQ5_zd   ;
+    wire  DQ4_zd   ;
+    wire  DQ3_zd   ;
+    wire  DQ2_zd   ;
+    wire  DQ1_zd   ;
+    wire  DQ0_zd   ;
 
     assign {DQ7_zd,
             DQ6_zd,
@@ -343,20 +357,33 @@ module hram_256mb
             DQ1_zd,
             DQ0_zd  } = Dout_zd;
 
-    tri_t RWDS_zd;
+    wire RWDS_zd;
     assign RWDS_zd = RWDSout_zd;
 
-    tri_t [7:0] Dout_zd_tmp = {8{_Z}};// = 8'bzzzzzzzz;
-    tri_t RWDSout_zd_tmp = _Z;// = 1'bz;
+    reg [7:0] Dout_zd_tmp = 8'bzzzzzzzz;
+    reg RWDSout_zd_tmp = 1'bz;
+    */
+    dq_output_t Dout_zd_tmp = DQ_RELEASED;
+    rwds_output_t RWDSout_zd_tmp = RWDS_RELEASED;
 
-    tri_t [7:0] Dout_zd_latchH ;
-    tri_t [7:0] Dout_zd_latchL ;
-    tri_t RWDS_zd_latchH ;
-    tri_t RWDS_zd_latchL ;
+    /*
+
+    reg [7:0] Dout_zd_latchH ;
+    reg [7:0] Dout_zd_latchL ;
+    reg RWDS_zd_latchH ;
+    reg RWDS_zd_latchL ;
+    */
+    dq_output_t Dout_zd_latchH ;
+    dq_output_t Dout_zd_latchL ;
+    rwds_output_t RWDS_zd_latchH ;
+    rwds_output_t RWDS_zd_latchL ;
 
     wire RESETNeg_pullup;
-    //assign RESETNeg_pullup = (RESETNeg === 1'bZ) ? 1 : RESETNeg;
-    assign RESETNeg_pullup =   RESETNeg;
+    /*
+    assign RESETNeg_pullup = (RESETNeg === 1'bZ) ? 1 : RESETNeg;
+    */
+    // The testbench drives reset explicitly; floating reset is unsupported here.
+    assign RESETNeg_pullup = RESETNeg;
 
     wire CKDiff;
     reg RW     = 0;
@@ -402,28 +429,38 @@ module hram_256mb
 ///////////////////////////////////////////////////////////////////////////////
 // Propagation  delay Section
 ///////////////////////////////////////////////////////////////////////////////
-    bufif0(DQ7, DQ7_zd[0], DQ7_zd[1]); //nmos   (DQ7 ,   DQ7_zd  , 1);
-    bufif0(DQ6, DQ6_zd[0], DQ6_zd[1]); //nmos   (DQ6 ,   DQ6_zd  , 1);
-    bufif0(DQ5, DQ5_zd[0], DQ5_zd[1]); //nmos   (DQ5 ,   DQ5_zd  , 1);
-    bufif0(DQ4, DQ4_zd[0], DQ4_zd[1]); //nmos   (DQ4 ,   DQ4_zd  , 1);
-    bufif0(DQ3, DQ3_zd[0], DQ3_zd[1]); //nmos   (DQ3 ,   DQ3_zd  , 1);
-    bufif0(DQ2, DQ2_zd[0], DQ2_zd[1]); //nmos   (DQ2 ,   DQ2_zd  , 1);
-    bufif0(DQ1, DQ1_zd[0], DQ1_zd[1]); //nmos   (DQ1 ,   DQ1_zd  , 1);
-    bufif0(DQ0, DQ0_zd[0], DQ0_zd[1]); //nmos   (DQ0 ,   DQ0_zd  , 1);
-    bufif0(RWDS, RWDS_zd[0], RWDS_zd[1]); //nmos   (RWDS ,  RWDS_zd , 1);
+    /*
+    nmos   (DQ7 ,   DQ7_zd  , 1);
+    nmos   (DQ6 ,   DQ6_zd  , 1);
+    nmos   (DQ5 ,   DQ5_zd  , 1);
+    nmos   (DQ4 ,   DQ4_zd  , 1);
+    nmos   (DQ3 ,   DQ3_zd  , 1);
+    nmos   (DQ2 ,   DQ2_zd  , 1);
+    nmos   (DQ1 ,   DQ1_zd  , 1);
+    nmos   (DQ0 ,   DQ0_zd  , 1);
+    nmos   (RWDS ,  RWDS_zd , 1);
 
     wire Dout_Z;
-    assign Dout_Z = Dout_zd=={8{_Z}};
+    assign Dout_Z = Dout_zd==8'bzzzzzzzz;
 
     wire RWDSout_Z;
-    assign RWDSout_Z = RWDSout_zd==_Z & RW == 0;
+    assign RWDSout_Z = RWDSout_zd==1'bz & RW == 0;
     //assign RWDS_zd = RWDSout_Z;
+    */
+
+    // Only the external pins use Z; internal delayed records carry data and enable.
+    assign {DQ7,DQ6,DQ5,DQ4,DQ3,DQ2,DQ1,DQ0} =
+        Dout_zd.enable ? Dout_zd.data : 8'bz;
+    assign RWDS = RWDSout_zd.enable ? RWDSout_zd.data : 1'bz;
+    wire Dout_Z = !Dout_zd.enable;
+    wire RWDSout_Z = !RWDSout_zd.enable && RW == 0;
 
     wire tRWR_CHK;
     assign tRWR_CHK = t_RWR_CHK;
 
 	real REFinterval;
-/*
+    // Keep original specify checks for reference; expose their constants to Verilator.
+`ifndef VERILATOR
     specify
 
         // tpd delays
@@ -540,7 +577,37 @@ module hram_256mb
     $period(posedge CK  ,tperiod_CK);
 
     endspecify
-*/
+`else
+    localparam tpd_CSNeg_RWDSn          = `tDSV;
+    localparam tpd_CSNeg_RWDSp			= `tDSZ;
+    localparam tpd_CK_RWDS              = `tCKDS;
+    localparam tpd_CSNeg_DQ0            = `tOZ;
+    localparam tpd_CK_DQ0               = `tCKD;
+    localparam tsetup_CSNeg_CK          = `tCSS;
+    localparam tsetup_DQ0_CK            = `tIS;
+    localparam thold_CSNeg_CK           = `tCSH;
+    localparam thold_DQ0_CK             = `tIH;
+    localparam thold_CSNeg_RESETNeg     = `tRH;
+    localparam trecovery_CSNeg_CK       = `tRWR;
+    localparam tskew_CSNeg_CSNeg        = `tCSM;
+    localparam tpw_CK_negedge           = `tCL;
+    localparam tpw_CK_posedge           = `tCH;
+    localparam tpw_CSNeg_posedge        = `tCSHI;
+    localparam tpw_RESETNeg_negedge     = `tRP;
+    localparam tACC_device				= `tACC;
+    localparam tperiod_CK               = `tCK;
+    localparam tdevice_VCS    = 150e6;
+    localparam tdevice_DPD    = 150e6;
+    localparam tdevice_DPDCSL = 150e6;
+    localparam tdevice_HSCSL  = 100e6;
+    localparam tdevice_RPH    = 200e3;
+    localparam tdevice_REF100 = `tRFH;
+    localparam tdevice_PO100 = 0;
+    localparam tHSIN = 3e6;
+    localparam tDPDIN = 3e6;
+    localparam tCSHS = 60e3;
+    localparam tCSDPD = 200e3;
+`endif
 
 ///////////////////////////////////////////////////////////////////////////////
 // Main Behavior Block                                                       //
@@ -605,7 +672,7 @@ module hram_256mb
     //Power Up time;
     initial
     begin
-        # (150e6) PoweredUp = 1'b1;
+        # tdevice_VCS PoweredUp = 1'b1;
     end
 
     initial
@@ -683,13 +750,13 @@ module hram_256mb
 		if(HS_in && !HSExit_in)begin
 			HSExit_in = 1'b1;
 		end else begin
-			#(60e3) HSExit_in = CSNeg_ipd;
+			#tCSHS HSExit_in = CSNeg_ipd;
 		end
 	end
 	
     always @(negedge HSExit_in)
     begin : HSExtEvent
-			#((100e6) - 1 - (60e3)) HSExt_out = 1'b1;
+			#(tdevice_HSCSL - 1 - tCSHS) HSExt_out = 1'b1;
 			#1 HSExt_out = 1'b0;
     end
     // Generate event to trigger exiting from HS mode
@@ -716,7 +783,7 @@ module hram_256mb
     // Deep Power Down time
     // ------------------------------------------------------------------------
     // DPDExit_in is any write or read access for which CSNeg_ipd is asserted
-    // more than (200e3) time
+    // more than tCSDPD time
     assign DPDExt_in = ((falling_edge_CSNeg == 1'b1) && (DPD_in == 1'b1)) ?
                          1'b1 : 1'b0;
 
@@ -725,13 +792,13 @@ module hram_256mb
 		if(DPD_in && !DPDExit_in)begin
 			DPDExit_in = 1'b1;
 		end else if(DPDExt_in)begin
-			#(200e3) DPDExit_in = CSNeg_ipd;
+			#tCSDPD DPDExit_in = CSNeg_ipd;
 		end
 	end
 	
     always @(negedge DPDExit_in)
     begin : DPDExtEvent
-		#((150e6) - 1 - (200e3)) DPDExt_out = 1'b1;
+		#(tdevice_DPDCSL - 1 - tCSDPD) DPDExt_out = 1'b1;
 		#1 DPDExt_out = 1'b0;
     end
     // Generate event to trigger exiting from DPD mode
@@ -757,7 +824,7 @@ module hram_256mb
     // Warm HW reset
     always @(posedge RPH_in)
     begin:RPHr
-        #(200e3) RPH_out = RPH_in;
+        #tdevice_RPH RPH_out = RPH_in;
     end
     always @(negedge RPH_in)
     begin:RPHf
@@ -768,7 +835,7 @@ module hram_256mb
     always @(posedge REF_in)
     begin:REFr
         if (SPEED100)
-            #((`tRFH) * REFinterval) REF_out = REF_in;
+            #(tdevice_REF100 * REFinterval) REF_out = REF_in;
     end
     always @(negedge REF_in)
     begin:REFf
@@ -779,7 +846,7 @@ module hram_256mb
     always @(posedge PO_in)
     begin:POr
         if (SPEED100)
-            #(0) PO_out = PO_in;
+            #tdevice_PO100 PO_out = PO_in;
     end
     always @(negedge PO_in)
     begin:POf
@@ -878,7 +945,7 @@ module hram_256mb
                 REFCOLL_ACTIV = 1'b0;
                 ALTERNATE_64  = 1'b0;
                 HYBRID        = 1'b0;
-		RWDSout_zd_tmp = Config_reg0[3] | refresh_pulse ? _1 : _0;// = Config_reg0[3] | refresh_pulse;
+		RWDSout_zd_tmp = '{enable: 1, data: Config_reg0[3] | refresh_pulse}; // Config_reg0[3] | refresh_pulse
                 bus_cycle_state = CA_BITS;
 				po_out_flag   = 1'b0;
 				tacc_start   = 1'b0;
@@ -903,15 +970,15 @@ module hram_256mb
                     if (Config_reg0[3] == 1'b1)// fixed latency
                     begin
                         REFCOLL_ACTIV = 1'b1;
-                        RWDSout_zd_tmp = _1;//1'b1;
+                        RWDSout_zd_tmp = RWDS_1; // 1'b1
                     end
                     else if (Config_reg0[3] == 1'b0) begin// variable latency
 						if(refresh_pulse)begin
 							REFCOLL_ACTIV = 1'b1;
-							RWDSout_zd_tmp = _1;//1'b1;
+							RWDSout_zd_tmp = RWDS_1; // 1'b1
 						end else begin
 							REFCOLL_ACTIV = 1'b0;//variable_latency;
-							RWDSout_zd_tmp = _0;//1'b0;
+							RWDSout_zd_tmp = RWDS_0; // 1'b0
 						end
 					end
                 end
@@ -965,9 +1032,9 @@ module hram_256mb
                 else if (ca_cnt == 8)
                 begin
                     if (RW == 1'b1) // read
-                        RWDSout_zd_tmp = _0;//1'b0;
+                        RWDSout_zd_tmp = RWDS_0; // 1'b0
                     else  // write
-                        RWDSout_zd_tmp = _0;//1'bz;
+                        RWDSout_zd_tmp = RWDS_RELEASED; // 1'bz
                     t_RWR_CHK = 1'b0;
                 end
 
@@ -995,7 +1062,7 @@ module hram_256mb
 						end
 					end else
 						bus_cycle_state = STAND_BY;
-						RWDSout_zd_tmp = _0;//1'bz;
+						RWDSout_zd_tmp = RWDS_RELEASED; // 1'bz
                 end
             end
         end
@@ -1013,24 +1080,22 @@ module hram_256mb
                 if (BurstDelay==0 && !PO_in)
                 begin
                     RdWrStart = 1'b0;
-                    if (RW == 1 && tACC_delay >= (`tACC)) // read
+                    if (RW == 1 && tACC_delay >= tACC_device) // read
                     begin
                         glitch_rwds = 1'b0;
                         glitch_rwdsR = 1'b1;
-                        RWDSout_zd_tmp = _1;//1'b1;
+                        RWDSout_zd_tmp = RWDS_1; // 1'b1
                         if (Target == 0) // mem
                         begin
                             if (Mem[Address][15:8]==-1)
-                                Dout_zd_tmp = 'x; //8'bxxxxxxxx;
+                                Dout_zd_tmp = '{enable: 1, data: 8'bxxxxxxxx}; // 8'bxxxxxxxx
                             else if(Address >= PartialRefresh_Array[Config_reg1[4:2]][0] && Address <= PartialRefresh_Array[Config_reg1[4:2]][1])
-                                //Dout_zd_tmp=Mem[Address][15:8];
-                                for (int j=0; j<8; j++) Dout_zd_tmp[j] = Mem[Address][8+j] ? _1 : _0;
+                                Dout_zd_tmp='{enable: 1, data: Mem[Address][15:8]}; // Mem[Address][15:8]
 							else begin
 								if(($time - Mem_time[Address]) > `tCSM*no_of_rows)
-									Dout_zd_tmp = 'x; //8'bxxxxxxxx;
+									Dout_zd_tmp = '{enable: 1, data: 8'bxxxxxxxx}; // 8'bxxxxxxxx
 								else
-									//Dout_zd_tmp=Mem[Address][15:8];
-									for (int j=0; j<8; j++) Dout_zd_tmp[j] = Mem[Address][8+j] ? _1 : _0;
+									Dout_zd_tmp='{enable: 1, data: Mem[Address][15:8]}; // Mem[Address][15:8]
 							end
                         end
                         else // reg
@@ -1038,30 +1103,26 @@ module hram_256mb
 							begin
 								if(ca_in[0] == 1'b0)
 								begin
-									//Dout_zd_tmp = Identification_reg0[15:8]; //Identification Register 0
-									for (int j=0; j<8; j++) Dout_zd_tmp[j] = Identification_reg0[8+j] ? _1 : _0;
+									Dout_zd_tmp = '{enable: 1, data: Identification_reg0[15:8]}; // Identification_reg0[15:8]; Identification Register 0
 								end else
 								begin
-									//Dout_zd_tmp = Identification_reg1[15:8]; //Identification Register 1
-									for (int j=0; j<8; j++) Dout_zd_tmp[j] = Identification_reg1[8+j] ? _1 : _0;
+									Dout_zd_tmp = '{enable: 1, data: Identification_reg1[15:8]}; // Identification_reg1[15:8]; Identification Register 1
 								end
 							end else if(ca_in[44:16] == Config_BASEADDRESS[31:3] && ca_in[2:1] == Config_BASEADDRESS[2:1])
 							begin
 								if(ca_in[0] == 1'b0)
 								begin
-									//Dout_zd_tmp = Config_reg0[15:8]; //Configuration register 0 Read
-									for (int j=0; j<8; j++) Dout_zd_tmp[j] = Config_reg0[8+j] ? _1 : _0;
+									Dout_zd_tmp = '{enable: 1, data: Config_reg0[15:8]}; // Config_reg0[15:8]; Configuration register 0 Read
 								end else
 								begin
-									//Dout_zd_tmp = Config_reg1[15:8]; //Configuration register 1 Read
-									for (int j=0; j<8; j++) Dout_zd_tmp[j] = Config_reg1[8+j] ? _1 : _0;
+									Dout_zd_tmp = '{enable: 1, data: Config_reg1[15:8]}; // Config_reg1[15:8]; Configuration register 1 Read
 								end
 							end else 
 							begin
-								Dout_zd_tmp = {8{_Z}}; //8'hzz;
+								Dout_zd_tmp = DQ_RELEASED; // 8'hzz
 							end
                     end
-                    else if(tACC_delay >= (`tACC)) // (RW == 0) write
+                    else if(tACC_delay >= tACC_device) // (RW == 0) write
                     begin
 			glitch_rwds = 1'b1;
                         Data_in[15:8] = Din;
@@ -1069,7 +1130,7 @@ module hram_256mb
                         UByteMask = RWDS;
                     end
                 end else if(BurstDelay == 1 && RW)begin
-					Dout_zd_tmp = #(`tDQLZ) 'x;//8'hxx;
+					Dout_zd_tmp = #(`tDQLZ) '{enable: 1, data: 8'hxx}; // #(`tDQLZ) 8'hxx
 				end
             end
 
@@ -1117,8 +1178,8 @@ module hram_256mb
                 end
                 else
                 begin
-                    if (BurstDelay>0 || tACC_delay < (`tACC))begin
-						if(BurstDelay == 0 && tACC_delay < (`tACC))begin
+                    if (BurstDelay>0 || tACC_delay < tACC_device)begin
+						if(BurstDelay == 0 && tACC_delay < tACC_device)begin
 							BurstDelay = 0;
 						end else begin
 							BurstDelay = BurstDelay - 1;
@@ -1133,20 +1194,18 @@ module hram_256mb
                             begin
                                 if (RW == 1) // read
                                 begin
-                                    RWDSout_zd_tmp = _0;//1'b0;
+                                    RWDSout_zd_tmp = RWDS_0; // 1'b0
                                     if (Target == 0) // mem
                                     begin
 										if (Mem[Address][7:0]==-1)
-											Dout_zd_tmp = 'x; //8'bxxxxxxxx;
+											Dout_zd_tmp = '{enable: 1, data: 8'bxxxxxxxx}; // 8'bxxxxxxxx
 										else if(Address >= PartialRefresh_Array[Config_reg1[4:2]][0] && Address <= PartialRefresh_Array[Config_reg1[4:2]][1])
-											//Dout_zd_tmp=Mem[Address][7:0];
-											for (int j=0; j<8; j++) Dout_zd_tmp[j] = Mem[Address][j] ? _1 : _0;
+											Dout_zd_tmp='{enable: 1, data: Mem[Address][7:0]}; // Mem[Address][7:0]
 										else begin
 											if(($time - Mem_time[Address]) > `tCSM*no_of_rows)
-												Dout_zd_tmp = 'x; //8'bxxxxxxxx;
+												Dout_zd_tmp = '{enable: 1, data: 8'bxxxxxxxx}; // 8'bxxxxxxxx
 											else
-												//Dout_zd_tmp=Mem[Address][7:0];
-												for (int j=0; j<8; j++) Dout_zd_tmp[j] = Mem[Address][j] ? _1 : _0;
+												Dout_zd_tmp='{enable: 1, data: Mem[Address][7:0]}; // Mem[Address][7:0]
 										end
                                     end
                                     else // reg
@@ -1154,27 +1213,23 @@ module hram_256mb
 										begin
 											if(ca_in[0] == 1'b0)
 											begin
-												//Dout_zd_tmp = '1;//Identification_reg0[7:0]; //Identification Register 0
-												for (int j=0; j<8; j++) Dout_zd_tmp[j] = Identification_reg0[j] ? _1 : _0;
+												Dout_zd_tmp = '{enable: 1, data: Identification_reg0[7:0]}; // Identification_reg0[7:0]; Identification Register 0
 											end else
 											begin
-												//Dout_zd_tmp = '1;//Identification_reg1[7:0]; //Identification Register 1
-												for (int j=0; j<8; j++) Dout_zd_tmp[j] = Identification_reg1[j] ? _1 : _0;
+												Dout_zd_tmp = '{enable: 1, data: Identification_reg1[7:0]}; // Identification_reg1[7:0]; Identification Register 1
 											end
 										end else if(ca_in[44:16] == Config_BASEADDRESS[31:3] && ca_in[2:1] == Config_BASEADDRESS[2:1])
 										begin
 											if(ca_in[0] == 1'b0)
 											begin
-												//Dout_zd_tmp = '1;//Config_reg0[7:0]; //Configuration register 0 Read
-												for (int j=0; j<8; j++) Dout_zd_tmp[j] = Config_reg0[j] ? _1 : _0;
+												Dout_zd_tmp = '{enable: 1, data: Config_reg0[7:0]}; // Config_reg0[7:0]; Configuration register 0 Read
 											end else
 											begin
-												//Dout_zd_tmp = '1;//Config_reg1[7:0]; //Configuration register 1 Read
-												for (int j=0; j<8; j++) Dout_zd_tmp[j] = Config_reg1[j] ? _1 : _0;
+												Dout_zd_tmp = '{enable: 1, data: Config_reg1[7:0]}; // Config_reg1[7:0]; Configuration register 1 Read
 											end
 										end else
 										begin
-											Dout_zd_tmp = {8{_Z}};//8'hzz;
+											Dout_zd_tmp = DQ_RELEASED; // 8'hzz
 										end
                                 end
                                 else // write
@@ -1318,18 +1373,18 @@ module hram_256mb
         if (falling_edge_CSNeg)
         begin
             if (Config_reg0[3] == 1'b1)// fixed latency
-                RWDSout_zd = _1;//1'b1;
+                RWDSout_zd = '{enable: 1, data: 1'b1}; //1'b1;
             else
-                RWDSout_zd = _0;//1'b0;
+                RWDSout_zd = '{enable: 1, data: 1'b0}; //1'b0;
         end
 
         if (rising_edge_CSNeg || falling_edge_RESETNeg)
         begin
             bus_cycle_state = STAND_BY;
-            Dout_zd_tmp = {8{_Z}};//8'bzzzzzzzz;
-            RWDSout_zd_tmp = _Z;//1'bz;
-            Dout_zd = {8{_Z}};//8'bzzzzzzzz;
-            RWDSout_zd = _Z;//1'bz;
+            Dout_zd_tmp = DQ_RELEASED; //8'bzzzzzzzz;
+            RWDSout_zd_tmp = RWDS_RELEASED; //1'bz;
+            Dout_zd = DQ_RELEASED; //8'bzzzzzzzz;
+            RWDSout_zd = RWDS_RELEASED; //1'bz;
             glitch_rwds = 1'b0;
             glitch_rwdsR = 1'b0;
             if (falling_edge_RESETNeg) begin
@@ -1446,11 +1501,11 @@ module hram_256mb
                 if (falling_edge_RESETNeg)
                     RPH_in = 1'b1;
                 if (DPD_ACT)begin
-                    #(3e6) DPD_in = DPD_ACT;
+                    #tDPDIN DPD_in = DPD_ACT;
 					DPD_ACT = 1'b0;
 				end
 				if(HS_ACT)begin
-					#(3e6) HS_in = HS_ACT;
+					#tHSIN HS_in = HS_ACT;
 					HS_ACT = 1'b0;
 				end
             end
@@ -1601,7 +1656,7 @@ module hram_256mb
 		end
     end
 
-/*    always @(rising_edge_CSNeg)
+    always @(rising_edge_CSNeg)
     begin
         disable read_process_dq1;
         disable read_process_dq2;
@@ -1609,15 +1664,11 @@ module hram_256mb
         disable read_process_rwds2;
         disable read_process_rwdsR1;
         disable read_process_rwdsR2;
-    end */
-reg read_active;
-initial read_active = 0;
-always @(negedge CSNeg) read_active <= 1'b1;
-always @(posedge CSNeg) read_active <= 1'b0;
+    end
 
  always @(rising_edge_CKDiff)
     begin: read_process_dq1
-        if (read_active)
+        if (~CSNeg_ipd)
         begin
             if (glitch_dq)
             begin
@@ -1633,7 +1684,7 @@ always @(posedge CSNeg) read_active <= 1'b0;
 
  always @(falling_edge_CKDiff)
     begin: read_process_dq2
-        if (read_active)
+        if (~CSNeg_ipd)
         begin
             if (glitch_dq)
             begin
@@ -1649,7 +1700,7 @@ always @(posedge CSNeg) read_active <= 1'b0;
 
     always @(rising_edge_CKDiff)
     begin: read_process_rwds1
-        if (read_active)
+        if (~CSNeg_ipd)
         begin
             if (glitch_rwds && !REFCOLL)
             begin
@@ -1669,7 +1720,7 @@ always @(posedge CSNeg) read_active <= 1'b0;
 
     always @(falling_edge_CKDiff)
     begin: read_process_rwds2
-        if (read_active)
+        if (~CSNeg_ipd)
         begin
             if (glitch_rwds && !REFCOLL)
             begin
@@ -1689,7 +1740,7 @@ always @(posedge CSNeg) read_active <= 1'b0;
 
     always @(rising_edge_CKDiff)
     begin: read_process_rwdsR1
-        if (read_active)
+        if (~CSNeg_ipd)
         begin
             if (glitch_rwdsR && !REFCOLL)
             begin
@@ -1710,7 +1761,7 @@ always @(posedge CSNeg) read_active <= 1'b0;
 	
     always @(falling_edge_CKDiff)
     begin: read_process_rwdsR2
-        if (read_active)
+        if (~CSNeg_ipd)
         begin
             if (glitch_rwdsR && !REFCOLL)
             begin
@@ -1795,8 +1846,8 @@ always @(posedge CSNeg) read_active <= 1'b0;
 	always @(posedge rising_edge_CSNeg or posedge DQn_latch or posedge DQp_latch or posedge DQn_z or posedge DQp_z)
 	begin
 		if(CSNeg)begin
-			Dout_zd <= {8{_Z}};//8'hzz;
-			RWDSout_zd <= _Z;//1'bz;
+			Dout_zd <= DQ_RELEASED; //8'hzz;
+			RWDSout_zd <= RWDS_RELEASED; //1'bz;
 		end else begin
 			if(DQn_latch)begin
 				Dout_zd <= Dout_zdn;
@@ -1809,11 +1860,11 @@ always @(posedge CSNeg) read_active <= 1'b0;
 			end 
 			
 			if(DQp_z)begin
-				Dout_zd <= {8{_Z}};//8'hz;
+				Dout_zd <= DQ_RELEASED; //8'hz;
 			end
 			
 			if(DQn_z)begin
-				Dout_zd <= {8{_Z}};//8'hz;
+				Dout_zd <= DQ_RELEASED; //8'hz;
 			end
 		end
 	end
@@ -1822,7 +1873,7 @@ always @(posedge CSNeg) read_active <= 1'b0;
 	begin
 		if(CSNeg)begin
 			rwds_enable <= 1'b0;
-		end else if((bus_cycle_state == DATA_BITS) && (BurstDelay == 0) && tACC_delay >= (`tACC))begin
+		end else if((bus_cycle_state == DATA_BITS) && (BurstDelay == 0) && tACC_delay >= tACC_device)begin
 			rwds_enable <= 1'b1;
 		end
 	end
