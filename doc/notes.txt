@@ -2,6 +2,11 @@ Repo
 -------------------
 git clone git@github.com:raumzeitt/rz-snn.git
 cd rz-snn/
+git submodule sync
+git submodule update --init --recursive
+
+# Update all submodules to latest remote branches
+git submodule update --init --remote --recursive
 
 Git submodule notes
 -------------------
@@ -10,6 +15,7 @@ git submodule add https://github.com/raumzeitt/rz-lib.git
 git add ../.gitmodules rz-lib
 git commit -m "..."
 
+git submodule sync
 git submodule update --init --recursive
 
 cd rz-lib
@@ -27,3 +33,63 @@ git submodule add git@github.com:raumzeitt/pulp-register_interface.git
 git submodule add git@github.com:raumzeitt/pulp_axi.git
 git submodule add git@github.com:raumzeitt/pulp-common_cells.git
 git submodule add git@github.com:raumzeitt/pulp-tech_cells_generic.git
+
+
+-------------------------------------------------------------------------------
+# To move your changes to a new feature branch and restore your main branch to perfectly match the original upstream repository, run the following commands in your terminal: 
+
+# 0. Set upstream to source of the fork
+git clone git@github.com:raumzeitt/hyperbus.git
+cd hyperbus/
+git remote add upstream git@github.com:pulp-platform/hyperbus.git
+git remote -v
+
+origin  git@github.com:raumzeitt/hyperbus.git (fetch)
+origin  git@github.com:raumzeitt/hyperbus.git (push)
+upstream        git@github.com:pulp-platform/hyperbus.git (fetch)
+upstream        git@github.com:pulp-platform/hyperbus.git (push)
+
+# 1. Ensure you are on main and copy your changes to a new branch
+git checkout main
+git branch fix/verilator-compatibility
+git branch
+
+# 2. Fetch the original repository's main branch
+git fetch upstream main
+
+# 3. Hard reset your local main to match the original repository exactly
+git reset --hard upstream/main
+
+# 4. Force-push the cleaned main back to your remote fork
+git push origin main --force 
+
+# 5. Switch to your new branch to continue working on your changes
+git checkout fix/verilator-compatibility
+git push -u origin fix/verilator-compatibility
+
+# 6. Optional
+git checkout main
+git reset --hard origin/main
+
+
+-------------------------------------------------------------------------------
+# 1. Set meld as the active diff tool
+git config --global diff.tool meld
+
+# 2. Map the file order panes (Left: Original/Local, Right: Modified/Remote)
+git config --global difftool.meld.cmd 'meld "$LOCAL" "$REMOTE"'
+
+# 3. Turn off launch confirmation prompts
+git config --global difftool.prompt false
+
+# 4. alias meld
+git config --global alias.meld difftool
+
+
+-------------------------------------------------------------------------------
+Codex Configuration Layout
+
+Add these lines to your ~/.codex/config.toml file to stop Codex from modifying your files autonomously:
+toml
+sandbox_mode = "read-only"      # Blocks Codex from writing changes to files
+approval_policy = "on-request"  # Forces Codex to prompt you before running comm
