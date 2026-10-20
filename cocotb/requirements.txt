@@ -1,0 +1,6 @@
+# Simulation dependencies for the UART and HyperBus tests.
+# Use Python 3.12.
+cocotb==1.9.2
+cocotbext-uart
+cocotbext-apb
+cocotbext-axi
