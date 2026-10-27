@@ -20,7 +20,13 @@ package my_bus_pkg;
     typedef logic [AxiIdWidth-1:0] id_t;
     typedef logic [AxiUserWidth-1:0] user_t;
 
+    // AXI Mux to HyperBus type, 6-bit ID
     `AXI_TYPEDEF_ALL(axi, addr_t, id_t, data_t, strb_t, user_t)
+
+    // 4 inputs to axi mux need 2 bit local src ID
+    parameter int NumAxiMasters = 4;
+    typedef logic [AxiIdWidth-$clog2(NumAxiMasters)-1:0] src_id_t;
+    `AXI_TYPEDEF_ALL(src_axi, addr_t, src_id_t, data_t, strb_t, user_t)
 
     // ---- REG ----
     parameter int RegAw = 32; // from PULP tb

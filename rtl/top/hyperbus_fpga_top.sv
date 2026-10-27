@@ -28,7 +28,7 @@ logic           uart_rx_w;
 logic           uart_tx_w;
 
 // APB signals
-localparam N_APB = 2;
+localparam N_APB = 3;
 logic[7:0]      PADDR;
 logic           PSEL;
 logic           PENABLE;
@@ -91,11 +91,16 @@ logic           axi_rvalid;
 logic           axi_rready;
 
 // hyperbus/axi
-axi_req_t       axi_req;
-axi_resp_t      axi_rsp;
+axi_req_t   axi_req;
+axi_resp_t  axi_rsp;
+// AXI sources: port 0 = UART, ports 1..3 reserved
+src_axi_req_t  [NumAxiMasters-1:0] axi_mux_reqs;
+src_axi_resp_t [NumAxiMasters-1:0] axi_mux_rsps;
 // hyperbus/apb
 reg_req_t       reg_req;
 reg_rsp_t       reg_rsp;
+// AXI access/APB
+reg_rsp_t       axi_access_rsp;
 
 // hyperbus/IO
 logic [NumChips-1:0] hyper_csn_o;
@@ -118,41 +123,45 @@ uart_apb_top uart_apb_top (.uart_rx(uart_rx_w), .uart_tx(uart_tx_w), .*);
 //  APB 
 //  0 = hyperbus
 //  1 = perf fsm
+//  2 = AXI access registers (0x80..0x8F)
 // Hyperbus:
 // Internal Parameters
-localparam int unsigned NumBaseRegs     = 11;
-localparam int unsigned NumRegs         = 2*NumChips + NumBaseRegs; // = 2*2 + 11 = 15 ($clog2(NumRegs) = 4)
+localparam int unsigned NumBaseRegs     = 12;
+localparam int unsigned NumRegs         = 2*NumChips + NumBaseRegs; // = 2*2 + 12 = 16 ($clog2(NumRegs) = 4)
 
 always_comb local_psel[0] = PADDR[7:6]==0 & PADDR[5:2]<NumRegs; 
-always_comb local_psel[1] = PADDR[7:6]==1; 
+always_comb local_psel[1] = PADDR[7:6]==1;
+always_comb local_psel[2] = PADDR[7:4]==8; 
 
 // hook up hyperbus APB
 
 /*-->
 ADDR   NAME                     USED BITS      DESCRIPTION
 ---------------------------------------------------------------------------
-0x00   CRANGE0_START            [31:0]         AXI base -> chip 0
-0x04   CRANGE0_END              [31:0]         AXI end   -> chip 0
-0x08   CRANGE1_START            [31:0]         AXI base -> chip 1
-0x0C   CRANGE1_END              [31:0]         AXI end   -> chip 1
-0x10   T_CSH_CYCLES             [7:0]          CS high time
-0x14   WHICH_PHY                UNUSED         (NumPhys=1 -> always 0)
-0x18   PHYS_IN_USE              UNUSED         (NumPhys=1 -> always 1)
+0x00   T_LATENCY_ACCESS         [3:0]          Base access latency
+0x04   EN_LATENCY_ADDITIONAL    [0:0]          Force additional latency
+0x08   T_BURST_MAX              [15:0]         Max data-phase cycles
+0x0C   T_READ_WRITE_RECOVERY    [3:0]          Recovery between transfers
+0x10   T_RX_CLK_DELAY           [7:0]          RX delay
+0x14   T_TX_CLK_DELAY           [7:0]          TX delay
+0x18   ADDRESS_MASK_MSB         [4:0]          Address width limit
 0x1C   ADDRESS_SPACE            [0:0]          0=memory, 1=register
-0x20   ADDRESS_MASK_MSB         [5:0]          address width limit
-0x24   T_TX_CLK_DELAY           [7:0]          TX delay
-0x28   T_RX_CLK_DELAY           [7:0]          RX delay
-0x2C   T_RW_RECOVERY            [7:0]          readâ->write delay
-0x30   T_BURST_MAX              [7:0]          max burst
-0x34   EN_LATENCY_ADDITIONAL    [0:0]          extra latency
-0x38   T_LATENCY_ACCESS         [4:0]          base latency
+0x20   PHYS_IN_USE              [0:0]          Active PHY count minus one
+0x24   WHICH_PHY                [0:0]          PHY selection
+0x28   T_CSH_CYCLES             [3:0]          CS high time
+0x2C   CSN_TO_CK_CYCLES         [3:0]          CS assertion to clock delay
+0x30   CRANGE0_START            [31:0]         Chip 0 range start, inclusive
+0x34   CRANGE0_END              [31:0]         Chip 0 range end, exclusive
+0x38   CRANGE1_START            [31:0]         Chip 1 range start, inclusive
+0x3C   CRANGE1_END              [31:0]         Chip 1 range end, exclusive
 */
 
 always_comb begin
     // not used: reg_rsp.error
     PRDATA = ({8{local_psel[0]}} & (reg_rsp.rdata[31:0] >> (8*PADDR[1:0]))) |
-                ({8{local_psel[1]}} & 8'h00);
-    PREADY = local_psel==0 ? 1 : |(local_psel & {1'b1, 1'b1, reg_rsp.ready});
+                ({8{local_psel[1]}} & 8'h00) |
+                ({8{local_psel[2]}} & axi_access_rsp.rdata[7:0]);
+    PREADY = local_psel==0 ? 1 : |(local_psel & {axi_access_rsp.ready, 1'b1, reg_rsp.ready});
 end 
 
 always_comb begin
@@ -256,47 +265,99 @@ end
 //      ar_valid && axi_rsp.ar_ready     read accepted
 // ==========================================================
 
+// UART-to-AXI access through APB slot 2
+assign axi_access_rsp.rdata[31:8] = 0;
+assign axi_access_rsp.error = 0; // No APB slave-error output
+
+apb_axi_access #(
+    .axi_req_t (src_axi_req_t),
+    .axi_rsp_t (src_axi_resp_t),
+    .reg_req_t (reg_req_t),
+    .reg_rsp_t (reg_rsp_t)
+) i_apb_axi_access (
+    .clk (clk),
+    .rst_n (rst_n),
+    .PADDR (PADDR[3:0]),
+    .PSEL (PSEL && local_psel[2]),
+    .PENABLE (PENABLE),
+    .PWRITE (PWRITE),
+    .PWDATA (PWDATA),
+    .PRDATA (axi_access_rsp.rdata[7:0]),
+    .PREADY (axi_access_rsp.ready),
+    .axi_req_o (axi_mux_reqs[0]),
+    .axi_rsp_i (axi_mux_rsps[0])
+);
+
+// Four AXI sources share HyperBus; only UART is connected for now.
+assign axi_mux_reqs[3:1] = 0;
+
+axi_mux #(
+    .SlvAxiIDWidth (AxiIdWidth - $clog2(NumAxiMasters)),
+    .slv_aw_chan_t (src_axi_aw_chan_t),
+    .mst_aw_chan_t (axi_aw_chan_t),
+    .w_chan_t (axi_w_chan_t),
+    .slv_b_chan_t (src_axi_b_chan_t),
+    .mst_b_chan_t (axi_b_chan_t),
+    .slv_ar_chan_t (src_axi_ar_chan_t),
+    .mst_ar_chan_t (axi_ar_chan_t),
+    .slv_r_chan_t (src_axi_r_chan_t),
+    .mst_r_chan_t (axi_r_chan_t),
+    .slv_req_t (src_axi_req_t),
+    .slv_resp_t (src_axi_resp_t),
+    .mst_req_t (axi_req_t),
+    .mst_resp_t (axi_resp_t),
+    .NoSlvPorts (NumAxiMasters),
+    .MaxWTrans (1)
+) i_axi_mux (
+    .clk_i (clk),
+    .rst_ni (rst_n),
+    .slv_reqs_i (axi_mux_reqs),
+    .slv_resps_o (axi_mux_rsps),
+    .mst_req_o (axi_req),
+    .mst_resp_i (axi_rsp)
+);
+
 // Flat AXI wires <-> axi_req_t / axi_rsp_t bridge
 // AW
-assign axi_req.aw.id        = axi_awid;
-assign axi_req.aw.addr      = axi_awaddr;
-assign axi_req.aw.len       = axi_awlen;
-assign axi_req.aw.size      = axi_awsize;
-assign axi_req.aw.burst     = axi_awburst;
-assign axi_req.aw.lock      = axi_awlock;
-assign axi_req.aw.cache     = axi_awcache;
-assign axi_req.aw.prot      = axi_awprot;
-assign axi_req.aw.qos       = axi_awqos;
-assign axi_req.aw.region    = axi_awregion;
-assign axi_req.aw.user      = axi_awuser;
-assign axi_req.aw_valid     = axi_awvalid;
+assign axi_awid = axi_req.aw.id;
+assign axi_awaddr = axi_req.aw.addr;
+assign axi_awlen = axi_req.aw.len;
+assign axi_awsize = axi_req.aw.size;
+assign axi_awburst = axi_req.aw.burst;
+assign axi_awlock = axi_req.aw.lock;
+assign axi_awcache = axi_req.aw.cache;
+assign axi_awprot = axi_req.aw.prot;
+assign axi_awqos = axi_req.aw.qos;
+assign axi_awregion = axi_req.aw.region;
+assign axi_awuser = axi_req.aw.user;
+assign axi_awvalid = axi_req.aw_valid;
 assign axi_awready          = axi_rsp.aw_ready;
 // W
-assign axi_req.w.data       = axi_wdata;
-assign axi_req.w.strb       = axi_wstrb;
-assign axi_req.w.last       = axi_wlast;
-assign axi_req.w.user       = axi_wuser;
-assign axi_req.w_valid      = axi_wvalid;
+assign axi_wdata = axi_req.w.data;
+assign axi_wstrb = axi_req.w.strb;
+assign axi_wlast = axi_req.w.last;
+assign axi_wuser = axi_req.w.user;
+assign axi_wvalid = axi_req.w_valid;
 assign axi_wready           = axi_rsp.w_ready;
 // B
 assign axi_bid              = axi_rsp.b.id;
 assign axi_bresp            = axi_rsp.b.resp;
 assign axi_buser            = axi_rsp.b.user;
 assign axi_bvalid           = axi_rsp.b_valid;
-assign axi_req.b_ready      = axi_bready;
+assign axi_bready = axi_req.b_ready;
 // AR
-assign axi_req.ar.id        = axi_arid;
-assign axi_req.ar.addr      = axi_araddr;
-assign axi_req.ar.len       = axi_arlen;
-assign axi_req.ar.size      = axi_arsize;
-assign axi_req.ar.burst     = axi_arburst;
-assign axi_req.ar.lock      = axi_arlock;
-assign axi_req.ar.cache     = axi_arcache;
-assign axi_req.ar.prot      = axi_arprot;
-assign axi_req.ar.qos       = axi_arqos;
-assign axi_req.ar.region    = axi_arregion;
-assign axi_req.ar.user      = axi_aruser;
-assign axi_req.ar_valid     = axi_arvalid;
+assign axi_arid = axi_req.ar.id;
+assign axi_araddr = axi_req.ar.addr;
+assign axi_arlen = axi_req.ar.len;
+assign axi_arsize = axi_req.ar.size;
+assign axi_arburst = axi_req.ar.burst;
+assign axi_arlock = axi_req.ar.lock;
+assign axi_arcache = axi_req.ar.cache;
+assign axi_arprot = axi_req.ar.prot;
+assign axi_arqos = axi_req.ar.qos;
+assign axi_arregion = axi_req.ar.region;
+assign axi_aruser = axi_req.ar.user;
+assign axi_arvalid = axi_req.ar_valid;
 assign axi_arready          = axi_rsp.ar_ready;
 // R
 assign axi_rid              = axi_rsp.r.id;
@@ -305,7 +366,7 @@ assign axi_rresp            = axi_rsp.r.resp;
 assign axi_rlast            = axi_rsp.r.last;
 assign axi_ruser            = axi_rsp.r.user;
 assign axi_rvalid           = axi_rsp.r_valid;
-assign axi_req.r_ready      = axi_rready;
+assign axi_rready = axi_req.r_ready;
 
 
 //  HYPERBUS

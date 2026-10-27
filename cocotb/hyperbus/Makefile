@@ -22,6 +22,7 @@ VERILOG_SOURCES += \
 VERILOG_SOURCES += \
         $(realpath ../../rtl/top/hyperbus_fpga_top.sv) \
         $(realpath ../../rtl/modules/uart_apb_top.sv) \
+        $(realpath ../../rtl/modules/apb_axi_access.sv) \
 
 VERILOG_SOURCES += \
         ../../lib/hyperbus/src/hyperbus_axi.sv \
@@ -68,6 +69,9 @@ VERILOG_SOURCES += \
         ../../lib/pulp-common_cells/src/deprecated/rr_arb_tree.sv \
         ../../lib/pulp-common_cells/src/deprecated/addr_decode.sv \
         ../../lib/pulp-common_cells/src/deprecated/addr_decode_dync.sv \
+        ../../lib/pulp-register_interface/src/reg_to_axi.sv \
+        ../../lib/pulp_axi/src/axi_mux.sv \
+        ../../lib/pulp_axi/src/axi_id_prepend.sv \
         ../../lib/pulp_axi/src/axi_atop_filter.sv \
         ../../lib/pulp_axi/src/axi_fifo.sv \
         ../../lib/pulp_axi/src/axi_serializer.sv \
