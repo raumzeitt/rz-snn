@@ -46,7 +46,11 @@ module uart_apb_top #(
     input  logic        PREADY
 );
 
-localparam [23:0] DIVISOR = 868; //=CLK_FREQ/BAUD;
+`ifndef UART_DIVISOR
+`define UART_DIVISOR 868
+`endif
+
+localparam [23:0] DIVISOR = `UART_DIVISOR;
 
 logic [7:0]     rx_data;
 logic           rx_valid;

@@ -114,6 +114,16 @@ VERILOG_INCLUDE_DIRS += \
 COMMON_DEFINES += \
         GLBL_INSTANCE \
 
+SPEEDUP ?= 0
+UART_DIVISOR ?= 868
+
+ifeq ($(SPEEDUP),1)
+        # Faster UART simulation: 25 Mbaud at a 100 MHz clock.
+        UART_DIVISOR = 4
+        export UART_DIVISOR
+        COMMON_DEFINES += UART_DIVISOR=$(UART_DIVISOR)
+endif
+
 ifeq ($(SIM),icarus)
         COMPILE_ARGS += $(COMMON_DEFINES:%=-D%)
         COMPILE_ARGS += -Wall

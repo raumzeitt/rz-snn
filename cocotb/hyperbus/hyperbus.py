@@ -9,6 +9,10 @@ from cocotbext.axi import AxiBus, AxiMaster
 import sys, os, time, random, logging
 from struct import unpack
 
+# At 100 MHz: UART_DIVISOR=868 ~ 115200 baud. UART_DIVISOR=4 ~ 25 Mbaud.
+UART_DIVISOR = int(os.environ.get("UART_DIVISOR", "868"))
+UART_BAUD = 100_000_000 / UART_DIVISOR
+
 # pip install cocotbext-uart
 # 2.0  - pip install cocotbext-axi
 # 1.9 - pip install cocotbext-apb
@@ -58,8 +62,8 @@ class UartTransactor:
         self.log = logging.getLogger("UART Transactor")
         self.log.setLevel(self.dut._log.level)
 
-        self.uart_source = UartSource(dut.uart_rx, baud=115200, bits=8, stop_bits=1)
-        self.uart_sink = UartSink(dut.uart_tx, baud=115200, bits=8, stop_bits=1)
+        self.uart_source = UartSource(dut.uart_rx, baud=UART_BAUD, bits=8, stop_bits=1)
+        self.uart_sink = UartSink(dut.uart_tx, baud=UART_BAUD, bits=8, stop_bits=1)
 
     async def uart_write(self, address, data):
         self.log.info(f"UART WRITE: ADDRESS=0x{address:02x} DATA=0x{data:02x}")
@@ -86,6 +90,40 @@ class UartTransactor:
         for i in range(4):
             await self.uart_write(address + i, (data>>(8*i)) & 0xff)
 
+    async def rd32(self, address):
+        data = 0
+        for i in range(4):
+            data |= (await self.uart_read(address + i)) << (8*i)
+        return data
+
+    async def axi_write(self, address, data):
+        assert address % 4 == 0
+        await self.wr32(0x80, address) # AXI byte address
+        await self.wr32(0x84, data) # AXI write data
+        await self.uart_write(0x88, 0x02) # Write all four bytes
+        for _ in range(16):
+            status = await self.uart_read(0x89)
+            if not status & 1:
+                assert not status & 2, "AXI write error"
+                return
+        raise TimeoutError("AXI write timeout")
+
+    async def axi_read(self, address, length=4):
+        assert address % 4 == 0 and length % 4 == 0
+        data = bytearray()
+        for offset in range(0, length, 4):
+            await self.wr32(0x80, address + offset) # AXI byte address
+            await self.uart_write(0x88, 1) # Start single-word read
+            for _ in range(16):
+                status = await self.uart_read(0x89)
+                if not status & 1:
+                    assert not status & 2, "AXI read error"
+                    break
+            else:
+                raise TimeoutError("AXI read timeout")
+            data.extend((await self.rd32(0x84)).to_bytes(4, "little"))
+        return bytes(data)
+
 @cocotb.test()
 async def hyperram_test(dut):
     log_level = os.environ.get('LOG_LEVEL', 'INFO') # NOTSET=0 DEBUG=10 INFO=20 WARN=30 ERROR=40 CRITICAL=50
@@ -97,15 +135,16 @@ async def hyperram_test(dut):
 
     # Transactors
     u = UartTransactor(dut)
-    p = ApbTransactor(dut.hyperbus_fpga_top)
-    x = AxiTransactor(dut.hyperbus_fpga_top)
+    #p = ApbTransactor(dut.hyperbus_fpga_top)
+    #x = AxiTransactor(dut.hyperbus_fpga_top)
 
     # 100MHz clock + 5 us reset
     cr = cocotb.start_soon(clock_n_reset(dut.clk, dut.rst_n, f=100e6, t=5))       
     await RisingEdge(dut.rst_n)
+    await Timer(1200, 'us')  # 60000 startup cycles at 50 MHz PHY clock
 
     # wait n=16 periods of baud clock (UART needs that)
-    await Timer(17 * 8680, 'ns')
+    await Timer(17 * UART_DIVISOR * 10, 'ns')
     
     # Basic test
     if 0:
@@ -142,21 +181,32 @@ async def hyperram_test(dut):
 
     # size=2 -> bytes in word = 2^size = 4
     # length = 4 = 4 bytes -> words = length in bytes / bytes per word = 4/4 = 1 words
-    r = cocotb.start_soon(x.axi_master.read(0x00000000, length=8, size=2 , prot=0))
-    t = Timer(25, 'us')
-    res = await First(t, r)
-    if res is t:
-        raise TimeoutError("AXI read timeout")
-    data = res.data
-    assert res.resp == 0  # AXI response status 0 = OK
-    await Timer(1, 'us')
+
+    #r = cocotb.start_soon(x.axi_master.read(0x00000000, length=8, size=2 , prot=0))
+    #t = Timer(25, 'us')
+    #res = await First(t, r)
+    #if res is t:
+    #   raise TimeoutError("AXI read timeout")
+    #data = res.data
+    #assert res.resp == 0  # AXI response status 0 = OK
+    #await Timer(1, 'us')
+
+    data = await u.axi_read(0x00000000)
+    data += await u.axi_read(0x00000000)
 
     data_lst = list(unpack(f'<{len(data)//4}I', data))  # < = little endian, I = uint32, len(data)//4 =number of words  - list of 32 bit integers
-    assert data_lst == [0x0E860E86, 0x0E860E86]
+    assert data_lst == [0x0E860E86] * (len(data)//4)
     data_str = [f'0x{i:08x}' for i in data_lst]
 
     dut._log.info(f"AXI read: RDATA={data_lst}")
     dut._log.info(f"AXI read: RDATA={' '.join(data_str)}")
+    # Write and read one word in HyperRAM memory space.
+    await u.wr32(0x1C, 0x00000000) # ADDRESS_SPACE = memory
+    await u.axi_write(0x00000000, 0xA5A55A5A)
+    memory_data = int.from_bytes(await u.axi_read(0x00000000), "little")
+    assert memory_data == 0xA5A55A5A, f"Memory readback: 0x{memory_data:08x}"
+    dut._log.info(f"Memory readback: 0x{memory_data:08x}")
+
     await Timer(5, 'us')
     # assert False, "Forced failure"
     raise cocotb.result.TestSuccess("Passed")  # End test immediately with PASS
