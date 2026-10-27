@@ -87,7 +87,7 @@ class UartTransactor:
             await self.uart_write(address + i, (data>>(8*i)) & 0xff)
 
 @cocotb.test()
-async def uart_test(dut):
+async def hyperram_test(dut):
     log_level = os.environ.get('LOG_LEVEL', 'INFO') # NOTSET=0 DEBUG=10 INFO=20 WARN=30 ERROR=40 CRITICAL=50
     dut._log.setLevel(log_level)
 
@@ -131,10 +131,10 @@ async def uart_test(dut):
     #await u.wr32(0x10, 0x00000006)   # 0x4 *4  T_RX_CLK_DELAY
     #await u.wr32(0x14, 0x00000000)   # 0x5 *4  T_TX_CLK_DELAY
     # --- CRANGE ---
-    await u.wr32(0x2c, 0x00000000)   # 0xB *4  CRANGE0_START
-    await u.wr32(0x30, 0x00FFFFFF)   # 0xC *4  CRANGE0_END
-    #await u.wr32(0x34, 0x01000000)   # 0xD *4  CRANGE1_START
-    #await u.wr32(0x38, 0x01FFFFFF)   # 0xE *4  CRANGE1_END
+    await u.wr32(0x30, 0x00000000)   # 0xC *4  CRANGE0_START
+    await u.wr32(0x34, 0x00FFFFFF)   # 0xD *4  CRANGE0_END
+    #await u.wr32(0x38, 0x01000000)   # 0xE *4  CRANGE1_START
+    #await u.wr32(0x3C, 0x01FFFFFF)   # 0xF *4  CRANGE1_END
 
     # --- REGISTER SPACE ---
     await u.wr32(0x1C, 0x00000001)   # 0x7 *4  ADDRESS_SPACE = 1
@@ -148,14 +148,18 @@ async def uart_test(dut):
     if res is t:
         raise TimeoutError("AXI read timeout")
     data = res.data
+    assert res.resp == 0  # AXI response status 0 = OK
     await Timer(1, 'us')
 
-    data_lst = list(unpack(f'<{len(data)//4}I', data))
+    data_lst = list(unpack(f'<{len(data)//4}I', data))  # < = little endian, I = uint32, len(data)//4 =number of words  - list of 32 bit integers
+    assert data_lst == [0x0E860E86, 0x0E860E86]
     data_str = [f'0x{i:08x}' for i in data_lst]
 
+    dut._log.info(f"AXI read: RDATA={data_lst}")
     dut._log.info(f"AXI read: RDATA={' '.join(data_str)}")
     await Timer(5, 'us')
-
+    # assert False, "Forced failure"
+    raise cocotb.result.TestSuccess("Passed")  # End test immediately with PASS
 
 
 
@@ -171,17 +175,17 @@ async def uart_test(dut):
     #await apb_write(dut, 0x0000001C, 0x00000000)
 
 
-    #await apb_write(dut, 0x00, 0x00000000)   # CRANGE0_START
-    #await apb_write(dut, 0x04, 0x00FFFFFF)   # CRANGE0_END
+    #await apb_write(dut, 0x30, 0x00000000)   # CRANGE0_START
+    #await apb_write(dut, 0x34, 0x00FFFFFF)   # CRANGE0_END
 
-    #await apb_write(dut, 0x38, 0x6)          # T_LATENCY_ACCESS = 6
-    #await apb_write(dut, 0x34, 0x0)          # EN_LATENCY_ADDITIONAL = 0
+    #await apb_write(dut, 0x00, 0x6)          # T_LATENCY_ACCESS = 6
+    #await apb_write(dut, 0x04, 0x0)          # EN_LATENCY_ADDITIONAL = 0
 
-    #await apb_write(dut, 0x24, 0x0)          # T_TX_CLK_DELAY
-    #await apb_write(dut, 0x28, 0x6)          # T_RX_CLK_DELAY (start)
+    #await apb_write(dut, 0x14, 0x0)          # T_TX_CLK_DELAY
+    #await apb_write(dut, 0x10, 0x6)          # T_RX_CLK_DELAY (start)
 
-    #await apb_write(dut, 0x2C, 0x8)          # T_RW_RECOVERY
-    #await apb_write(dut, 0x30, 0x10)         # T_BURST_MAX
+    #await apb_write(dut, 0x0C, 0x8)          # T_RW_RECOVERY
+    #await apb_write(dut, 0x08, 0x10)         # T_BURST_MAX
 
     # --- READ MR0 ---
     #await apb_write(dut, 0x1C, 0x1)          # ADDRESS_SPACE = register
