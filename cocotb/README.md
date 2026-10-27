@@ -46,6 +46,20 @@ Activate the environment each time you open a new terminal:
 conda activate rz-snn-sim
 ```
 
+## Run snnTorch notebooks
+
+The Python requirements also include the SNN training and notebook dependencies.
+Install FFmpeg through Conda so Matplotlib can render notebook animations:
+
+```bash
+conda activate rz-snn-sim
+conda install -c conda-forge ffmpeg
+```
+
+FFmpeg is an external executable and is not installed by the pip requirements.
+In VS Code, select `rz-snn-sim` as the notebook kernel. Restart the kernel after
+installing FFmpeg, then rerun the animation cells.
+
 ## Run the UART test
 
 Ensure Questa is on your PATH, then run:

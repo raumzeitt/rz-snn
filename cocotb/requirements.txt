@@ -4,3 +4,11 @@ cocotb==1.9.2
 cocotbext-uart
 cocotbext-apb
 cocotbext-axi
+
+# SNN training and VS Code notebook dependencies.
+torch
+torchvision
+snntorch
+matplotlib
+ipykernel
+pandas
