@@ -5,6 +5,9 @@ cocotbext-uart
 cocotbext-apb
 cocotbext-axi
 
+# PC side
+pyserial==3.5
+
 # SNN training and VS Code notebook dependencies.
 torch
 torchvision
