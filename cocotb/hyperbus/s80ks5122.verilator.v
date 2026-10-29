@@ -1869,11 +1869,18 @@ module hram_256mb
 		end
 	end
 	
+	/*
+	Guard read-output enable with RW: Verilator otherwise replays stale RWDS
+	during writes, masking a byte and leaving 0xFF. Full Verilator tests pass
+	with this guard; Questa/Icarus pin replays match their unguarded baselines.
+	Keep the original blocking assignments and delays.
+	*/
 	always @(CSNeg or rising_edge_CKDiff)
 	begin
 		if(CSNeg)begin
 			rwds_enable <= 1'b0;
-		end else if((bus_cycle_state == DATA_BITS) && (BurstDelay == 0) && tACC_delay >= tACC_device)begin
+		// end else if((bus_cycle_state == DATA_BITS) && (BurstDelay == 0) && tACC_delay >= tACC_device)begin
+		end else if(RW && (bus_cycle_state == DATA_BITS) && (BurstDelay == 0) && tACC_delay >= tACC_device)begin
 			rwds_enable <= 1'b1;
 		end
 	end

@@ -3,6 +3,7 @@ from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles, RisingEdge, FallingEdge, Timer,  First, Edge, Combine
 
 from uart_cocotb import UartTransactor
+from calibration import HyperBusCalibration
 from cocotbext.apb import ApbBus, ApbRam, ApbMaster
 from cocotbext.axi import AxiBus, AxiMaster
 
@@ -61,6 +62,7 @@ class AxiTransactor:
 async def hyperram_test(dut):
     log_level = os.environ["LOG_LEVEL"] # NOTSET=0 DEBUG=10 INFO=20 WARN=30 ERROR=40 CRITICAL=50
     dut._log.setLevel(log_level)
+    logging.getLogger("HyperBus calibration").setLevel(log_level)
 
     # Hack/Fix for missing "negedge reset" in verilator
     dut.rst_n.value = 1
@@ -108,6 +110,11 @@ async def hyperram_test(dut):
     #await u.wr32(0x38, 0x01000000)   # 0xE *4  CRANGE1_START
     #await u.wr32(0x3C, 0x01FFFFFF)   # 0xF *4  CRANGE1_END
 
+    # Calibrate RX and TX before the ID and memory tests.
+    HB_EXPECTED_ID = int(os.environ.get("HB_EXPECTED_ID", "0x0E860E86"), 0)
+    HB_TX_IS_DIVIDER = int(os.environ.get("HB_TX_IS_DIVIDER", 0))
+    await HyperBusCalibration(u, expected_id=HB_EXPECTED_ID).calibrate(tx_is_divider=HB_TX_IS_DIVIDER)
+
     # --- REGISTER SPACE ---
     await u.wr32(0x1C, 0x00000001)   # 0x7 *4  ADDRESS_SPACE = 1
 
@@ -128,7 +135,7 @@ async def hyperram_test(dut):
     data += await u.axi_read(0x00000000)
 
     data_lst = list(unpack(f'<{len(data)//4}I', data))  # < = little endian, I = uint32, len(data)//4 =number of words  - list of 32 bit integers
-    assert data_lst == [0x0E860E86] * (len(data)//4)
+    assert data_lst == [HB_EXPECTED_ID] * (len(data)//4)
     data_str = [f'0x{i:08x}' for i in data_lst]
 
     dut._log.info(f"AXI read: RDATA={data_lst}")

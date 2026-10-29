@@ -39,7 +39,6 @@ class HyperBusCalibration:
 
     async def _check(self, chk):
         """Check the ID or memory pattern depending on the register."""
-        self.log.debug(f"Calibration check: {chk}")
         try:
             if chk == 'id':
                 return await self._check_id()
@@ -74,7 +73,11 @@ class HyperBusCalibration:
         window = []
         for tap in range(32):
             await self.uart.wr32(register, tap)
-            if await self._check('id' if register == RX_DELAY else 'mem'):
+            type = 'id' if register == RX_DELAY else 'mem'
+            self.log.debug(f"tap={tap} {type}")
+            result = await self._check(type)
+            self.log.debug(f"    {'PASS' if result else 'FAIL'}")
+            if result:
                 window.append(tap)
         if not window:
             return None
@@ -87,7 +90,6 @@ class HyperBusCalibration:
             if len(current) > len(longest):
                 longest = current.copy()
         tap = (longest[0] + longest[-1]) // 2
-        await self.uart.wr32(register, tap)
         return tap
 
     async def calibrate(self, tx_is_divider=True):
@@ -103,9 +105,11 @@ class HyperBusCalibration:
                 if rx_tap is not None:
                     break
         assert rx_tap is not None, "No passing RX window"
+        await self.uart.wr32(RX_DELAY, rx_tap)
         if not tx_is_divider:
             tx_tap = await self._sweep(TX_DELAY)
             assert tx_tap is not None, "No passing TX window"
+            await self.uart.wr32(TX_DELAY, tx_tap)
         assert await self._check('id'), "Final ID check failed"
         assert await self._check('mem'), "Final memory check failed"
         self.log.info(f"Calibration passed: RX={rx_tap} TX={tx_tap}")
