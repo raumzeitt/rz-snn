@@ -3,6 +3,7 @@ obj_dir
 
 *.fst
 *.vcd
+*.wlf
 modelsim.ini
 results*.xml
 sim_build

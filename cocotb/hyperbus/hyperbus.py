@@ -9,6 +9,7 @@ from cocotbext.axi import AxiBus, AxiMaster
 
 import sys, os, time, random, logging
 from struct import unpack
+from math import ceil
 
 # Match the RTL clock and baud defaults; account for integer baud division.
 CLK_FREQ = int(os.environ.get("CLK_FREQ", 200_000_000))
@@ -19,7 +20,7 @@ UART_BAUD = CLK_FREQ / UART_DIVISOR
 # 2.0  - pip install cocotbext-axi
 # 1.9 - pip install cocotbext-apb
 
-async def clock_n_reset(c, r, f=0, n=5, t=10):
+async def clock_n_reset(c, r, f=0, t=10):
     if r is not None:
         r.value = 0
     if c is not None:
@@ -27,7 +28,7 @@ async def clock_n_reset(c, r, f=0, n=5, t=10):
         #print (f"p={period}ns, f={f}Hz")
         #raise  
         cocotb.start_soon(Clock(c, period, units="ns").start())
-        await ClockCycles(c, n)
+        await Timer(t, 'us')
     else:
         await Timer(t, 'us')
     if r is not None:
@@ -73,8 +74,8 @@ async def hyperram_test(dut):
     #p = ApbTransactor(dut.hyperbus_fpga_top)
     #x = AxiTransactor(dut.hyperbus_fpga_top)
 
-    # 100MHz/200MHz clock + 5 us reset
-    cr = cocotb.start_soon(clock_n_reset(dut.clk, dut.rst_n, f=CLK_FREQ, t=5))       
+    tRP = 0.2  # Minimum RESET# low pulse width: 200 ns
+    cr = cocotb.start_soon(clock_n_reset(dut.clk, dut.rst_n, f=CLK_FREQ, t=tRP))       
     await RisingEdge(dut.rst_n)
     await Timer(1200, 'us')  # 60000 startup cycles at 50 MHz PHY clock
 
@@ -101,6 +102,8 @@ async def hyperram_test(dut):
     # --- RESET / WAIT ---
     # --- CONFIG (APB) ---
     await u.wr32(0x00, 0x00000007)   # 0x0 *4  T_LATENCY_ACCESS - 7 @ 200MHz
+    tCSS = 4e-9  # Minimum CS#-to-CK setup time: 4 ns
+    await u.wr32(0x2C, ceil(tCSS * CLK_FREQ))  # CSN_TO_CK_CYCLES: 1 extra cycle = 5 ns at 200 MHz
     #await u.wr32(0x04, 0x00000000)   # 0x1 *4  EN_LATENCY_ADDITIONAL - no need
     #await u.wr32(0x10, 0x00000006)   # 0x4 *4  T_RX_CLK_DELAY
     #await u.wr32(0x14, 0x00000000)   # 0x5 *4  T_TX_CLK_DELAY

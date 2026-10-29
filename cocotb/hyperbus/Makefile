@@ -95,8 +95,11 @@ VERILOG_SOURCES += \
 # https://www.infineon.com/gated/infineon-verilog-model-for-hyperbus-interface-simulationmodels-en_bbc7fc83-6f5a-4731-bf16-e31ebffc63e0or
 # old link from PULP HyperBus Makefile no longer works
 
-VERILOG_SOURCES += \
-        s80ks5122.verilator.v
+ifeq ($(SIM),verilator)
+VERILOG_SOURCES += s80ks5122.verilator.v
+else
+VERILOG_SOURCES += s80ks5122.v
+endif
 
         #002-32555/hbus/s80ks5122.v \
         #S27KL0641_S27KS0641/S27kl0641/model/s27kl0641.v \
@@ -119,6 +122,7 @@ VERILOG_INCLUDE_DIRS += \
 # Defines section
 COMMON_DEFINES += \
         GLBL_INSTANCE \
+        COMMON_CELLS_ASSERTS_OFF \
 
 ifdef CLK_FREQ
 export CLK_FREQ
@@ -136,12 +140,19 @@ ifeq ($(SPEEDUP),1)
         COMMON_DEFINES += UART_DIVISOR=$(UART_DIVISOR)
 endif
 
+ifeq ($(SIM),questa)
+        COMPILE_ARGS += $(COMMON_DEFINES:%=+define+%)
+        COMPILE_ARGS += -suppress 2892 # Allow vendor models with implicit net declarations
+        ifeq ($(WAVES),1)
+                # Convert Questa waves for VaporView after simulation.
+                SIM_CMD_SUFFIX += && wlf2vcd -o dump.vcd vsim.wlf
+        endif
+endif
 ifeq ($(SIM),icarus)
         COMPILE_ARGS += $(COMMON_DEFINES:%=-D%)
         COMPILE_ARGS += -Wall
         COMPILE_ARGS += -v
         #COMPILE_ARGS += -g2005-sv
-        COMPILE_ARGS += -DCOMMON_CELLS_ASSERTS_OFF
 endif
 ifeq ($(SIM),verilator)
         EXTRA_ARGS += $(COMMON_DEFINES:%=+define+%)
@@ -152,7 +163,6 @@ ifeq ($(SIM),verilator)
         WNO = WIDTHTRUNC WIDTHEXPAND ASCRANGE EOFNEWLINE PINCONNECTEMPTY DECLFILENAME GENUNNAMED VARHIDDEN UNUSEDPARAM
         EXTRA_ARGS += -Wall $(WNO:%=-Wno-%)
         #EXTRA_ARGS += --bbox-unsup
-        EXTRA_ARGS += +define+COMMON_CELLS_ASSERTS_OFF
 
         EXTRA_ARGS += -Wno-fatal
         EXTRA_ARGS += -DVM_TIMING=0
@@ -172,4 +182,4 @@ clean::
 	rm -rf __pycache__ results.xml obj_dir
 	rm -rf dump.vcd dump.vcd.fst dump.vcd.fst.hier 
 	rm -rf dump.fst dump.fst.hier 
-	rm -rf transcript modelsim.ini vsim.wlf vsim_stacktrace.vstf vish_stacktrace.vstf
+	rm -rf transcript modelsim.ini vsim.vcd vsim.wlf vsim_stacktrace.vstf vish_stacktrace.vstf

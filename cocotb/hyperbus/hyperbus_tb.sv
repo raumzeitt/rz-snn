@@ -21,6 +21,11 @@ wire            pad_hyper_reset_n;
 wire            pad_hyper_rwds;
 wire [7:0]      pad_hyper_dq;
 
+// Infineon recommends a weak pull-down to hold released RWDS low.
+// https://community.infineon.com/t5/Knowledge-Base-Articles/Recommended-Configuration-for-RWDS-Pin-in-HyperBus-Memory/ta-p/252853
+// https://community.infineon.com/t5/Hyper-RAM/Weak-pull-down-for-RWDS-pin/td-p/1219472
+pulldown (pad_hyper_rwds);
+
 hyperbus_fpga_top hyperbus_fpga_top(.*);
 
 generate
