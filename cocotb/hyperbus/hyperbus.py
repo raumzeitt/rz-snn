@@ -9,9 +9,10 @@ from cocotbext.axi import AxiBus, AxiMaster
 import sys, os, time, random, logging
 from struct import unpack
 
-# At 100 MHz: UART_DIVISOR=868 ~ 115200 baud. UART_DIVISOR=4 ~ 25 Mbaud.
-UART_DIVISOR = int(os.environ.get("UART_DIVISOR", "868"))
-UART_BAUD = 100_000_000 / UART_DIVISOR
+# Match the RTL clock and baud defaults; account for integer baud division.
+CLK_FREQ = int(os.environ.get("CLK_FREQ", 200_000_000))
+UART_DIVISOR = int(os.environ.get("UART_DIVISOR", CLK_FREQ / 115200))
+UART_BAUD = CLK_FREQ / UART_DIVISOR
 
 # pip install cocotbext-uart
 # 2.0  - pip install cocotbext-axi
@@ -70,13 +71,13 @@ async def hyperram_test(dut):
     #p = ApbTransactor(dut.hyperbus_fpga_top)
     #x = AxiTransactor(dut.hyperbus_fpga_top)
 
-    # 100MHz clock + 5 us reset
-    cr = cocotb.start_soon(clock_n_reset(dut.clk, dut.rst_n, f=100e6, t=5))       
+    # 100MHz/200MHz clock + 5 us reset
+    cr = cocotb.start_soon(clock_n_reset(dut.clk, dut.rst_n, f=CLK_FREQ, t=5))       
     await RisingEdge(dut.rst_n)
     await Timer(1200, 'us')  # 60000 startup cycles at 50 MHz PHY clock
 
     # wait n=16 periods of baud clock (UART needs that)
-    await Timer(17 * UART_DIVISOR * 10, 'ns')
+    await Timer(17 * 1e9 / UART_BAUD, 'ns')
     
     # Basic test
     if 0:

@@ -25,10 +25,9 @@ PC          FPGA(UART)     APB
 (|<--[0x55]------|           |)
  
  */
-module uart_apb_top #(
-    parameter CLK_FREQ = 100_000_000,
-    parameter BAUD     = 115200
-)(
+`include "uart_config.vh"
+
+module uart_apb_top (
     input  logic        clk,
     input  logic        rst_n,
 
@@ -45,10 +44,6 @@ module uart_apb_top #(
     input  logic[7:0]   PRDATA,
     input  logic        PREADY
 );
-
-`ifndef UART_DIVISOR
-`define UART_DIVISOR 868
-`endif
 
 localparam [23:0] DIVISOR = `UART_DIVISOR;
 

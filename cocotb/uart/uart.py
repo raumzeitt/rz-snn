@@ -90,7 +90,7 @@ async def uart_test(dut):
     p = ApbRamTransactor(dut)
 
     # 5 us reset
-    cr = cocotb.start_soon(clock_n_reset(dut.clk, dut.rst_n, f=100e6, t=5))       
+    cr = cocotb.start_soon(clock_n_reset(dut.clk, dut.rst_n, f=200e6, t=5))       
     await RisingEdge(dut.rst_n)
     # wait n=16 periods of baud clock
     await Timer(17 * 8680, 'ns')

@@ -373,6 +373,7 @@ assign axi_rready = axi_req.r_ready;
 hyperbus #(
     .NumChips(NumChips),
     .NumPhys(NumPhys),
+    .UsePhyClkDivider(UsePhyClkDivider),
 
     // AXI widths (from your pkg)
     .AxiAddrWidth(AxiAddrWidth),

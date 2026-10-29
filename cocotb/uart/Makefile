@@ -20,6 +20,7 @@ VERILOG_SOURCES += \
         $(realpath ../../lib/wbuart32/rtl/txuart.v) \
 
 #VERILOG_INCLUDE_DIRS += ../../rtl/spi
+VERILOG_INCLUDE_DIRS += ../../rtl/modules
 
 ifeq ($(SIM),icarus)
         COMPILE_ARGS += -Wall

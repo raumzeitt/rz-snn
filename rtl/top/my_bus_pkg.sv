@@ -7,6 +7,7 @@ package my_bus_pkg;
     // ---- Topo ----
     parameter int unsigned NumChips = 2;
     parameter int unsigned NumPhys = 1;
+    parameter bit UsePhyClkDivider = 0; // 0: TX delay line; 1: internal 1/2 clock divider
 
     // ---- AXI ----
     parameter int AxiAddrWidth = 32; // from PULP tb

@@ -113,18 +113,24 @@ VERILOG_SOURCES += \
 VERILOG_INCLUDE_DIRS += \
         ../../lib/pulp_axi/include/ \
         ../../lib/pulp-register_interface/include/ \
-        ../../lib/pulp-common_cells/include/
-
+        ../../lib/pulp-common_cells/include/ \
+        ../../rtl/modules \
 
 # Defines section
 COMMON_DEFINES += \
         GLBL_INSTANCE \
 
+ifdef CLK_FREQ
+export CLK_FREQ
+COMMON_DEFINES += CLK_FREQ=$(CLK_FREQ)
+endif
+
 SPEEDUP ?= 0
-UART_DIVISOR ?= 868
+# UART_DIVISOR ?= 868
+# UART_DIVISOR ?= 1736
 
 ifeq ($(SPEEDUP),1)
-        # Faster UART simulation: 25 Mbaud at a 100 MHz clock.
+        # Faster UART simulation: 25/50 Mbaud at a 100/200 MHz clock.
         UART_DIVISOR = 4
         export UART_DIVISOR
         COMMON_DEFINES += UART_DIVISOR=$(UART_DIVISOR)
