@@ -77,7 +77,7 @@ async def hyperram_test(dut):
     tRP = 0.2  # Minimum RESET# low pulse width: 200 ns
     cr = cocotb.start_soon(clock_n_reset(dut.clk, dut.rst_n, f=CLK_FREQ, t=tRP))       
     await RisingEdge(dut.rst_n)
-    await Timer(1200, 'us')  # 60000 startup cycles at 50 MHz PHY clock
+    await ClockCycles(dut.clk, 2 * 60000)  # PHY startup; covers divider enabled or disabled
 
     # wait n=16 periods of baud clock (UART needs that)
     await Timer(17 * 1e9 / UART_BAUD, 'ns')
