@@ -2,7 +2,7 @@ import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles, RisingEdge, FallingEdge, Timer,  First, Edge, Combine
 
-from cocotbext.uart import UartSource, UartSink
+from uart_cocotb import UartTransactor
 from cocotbext.apb import ApbBus, ApbRam, ApbMaster
 from cocotbext.axi import AxiBus, AxiMaster
 
@@ -56,77 +56,9 @@ class AxiTransactor:
         self.axi_master = AxiMaster(AxiBus.from_prefix(dut, "axi"), dut.clk, dut.rst_n, reset_active_level=False)
 
     
-class UartTransactor:
-    def __init__(self, dut):
-        self.dut = dut
-        self.log = logging.getLogger("UART Transactor")
-        self.log.setLevel(self.dut._log.level)
-
-        self.uart_source = UartSource(dut.uart_rx, baud=UART_BAUD, bits=8, stop_bits=1)
-        self.uart_sink = UartSink(dut.uart_tx, baud=UART_BAUD, bits=8, stop_bits=1)
-
-    async def uart_write(self, address, data):
-        self.log.info(f"UART WRITE: ADDRESS=0x{address:02x} DATA=0x{data:02x}")
-        await self.uart_source.write(bytes([0x1, address, data]))
-        await self.uart_source.wait()
-
-    async def uart_cmd(self, cmd):
-        assert cmd != 1
-        assert cmd != 2
-        self.log.info(f"UART COMMAND: COMMAND=0x{cmd:02x} ")
-        await self.uart_source.write(bytes([cmd]))
-        await self.uart_source.wait()
-
-    async def uart_read(self, address):
-        t = cocotb.start_soon(self.uart_source.write(bytes([0x2, address])))  
-        r = cocotb.start_soon(self.uart_sink.read())  
-        await Combine(t, r)
-        data = r.result()
-        data = data[0] #bytearray
-        self.log.info(f"UART READ:  ADDRESS=0x{address:02x} DATA=0x{data:02x}")
-        return data
-
-    async def wr32(self, address, data):
-        for i in range(4):
-            await self.uart_write(address + i, (data>>(8*i)) & 0xff)
-
-    async def rd32(self, address):
-        data = 0
-        for i in range(4):
-            data |= (await self.uart_read(address + i)) << (8*i)
-        return data
-
-    async def axi_write(self, address, data):
-        assert address % 4 == 0
-        await self.wr32(0x80, address) # AXI byte address
-        await self.wr32(0x84, data) # AXI write data
-        await self.uart_write(0x88, 0x02) # Write all four bytes
-        for _ in range(16):
-            status = await self.uart_read(0x89)
-            if not status & 1:
-                assert not status & 2, "AXI write error"
-                return
-        raise TimeoutError("AXI write timeout")
-
-    async def axi_read(self, address, length=4):
-        assert address % 4 == 0 and length % 4 == 0
-        data = bytearray()
-        for offset in range(0, length, 4):
-            await self.wr32(0x80, address + offset) # AXI byte address
-            await self.uart_write(0x88, 1) # Start single-word read
-            for _ in range(16):
-                status = await self.uart_read(0x89)
-                if not status & 1:
-                    assert not status & 2, "AXI read error"
-                    break
-            else:
-                raise TimeoutError("AXI read timeout")
-            data.extend((await self.rd32(0x84)).to_bytes(4, "little"))
-        return bytes(data)
-
 @cocotb.test()
 async def hyperram_test(dut):
-    log_level = os.environ.get('LOG_LEVEL', 'INFO') # NOTSET=0 DEBUG=10 INFO=20 WARN=30 ERROR=40 CRITICAL=50
+    log_level = os.environ["LOG_LEVEL"] # NOTSET=0 DEBUG=10 INFO=20 WARN=30 ERROR=40 CRITICAL=50
     dut._log.setLevel(log_level)
 
     # Hack/Fix for missing "negedge reset" in verilator
@@ -134,7 +66,7 @@ async def hyperram_test(dut):
     await Timer(1, 'ps')
 
     # Transactors
-    u = UartTransactor(dut)
+    u = UartTransactor(dut, baud=UART_BAUD)
     #p = ApbTransactor(dut.hyperbus_fpga_top)
     #x = AxiTransactor(dut.hyperbus_fpga_top)
 
@@ -200,12 +132,21 @@ async def hyperram_test(dut):
 
     dut._log.info(f"AXI read: RDATA={data_lst}")
     dut._log.info(f"AXI read: RDATA={' '.join(data_str)}")
-    # Write and read one word in HyperRAM memory space.
+
+    # Write five random words to sequential addresses, then check all five.
     await u.wr32(0x1C, 0x00000000) # ADDRESS_SPACE = memory
-    await u.axi_write(0x00000000, 0xA5A55A5A)
-    memory_data = int.from_bytes(await u.axi_read(0x00000000), "little")
-    assert memory_data == 0xA5A55A5A, f"Memory readback: 0x{memory_data:08x}"
-    dut._log.info(f"Memory readback: 0x{memory_data:08x}")
+    memory_words = [random.getrandbits(32) for _ in range(5)]
+
+    for i, value in enumerate(memory_words):
+        addr = 0 + 4*i
+        await u.axi_write(addr, value)
+        dut._log.info(f"Memory write: A=0x{addr:08x} D=0x{value:08x}")
+
+    for i, expected in enumerate(memory_words):
+        addr = 0 + 4*i
+        memory_data = int.from_bytes(await u.axi_read(addr), "little")
+        assert memory_data == expected
+        dut._log.info(f"Memory readback: A=0x{addr:08x} D=0x{memory_data:08x}")
 
     await Timer(5, 'us')
     # assert False, "Forced failure"

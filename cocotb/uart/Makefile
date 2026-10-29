@@ -5,6 +5,12 @@ SIM ?= verilator
 export SIM := $(SIM)
 TOPLEVEL_LANG ?= verilog
 
+# Common Python test and transactor verbosity.
+export LOG_LEVEL ?= INFO
+
+# Shared Python UART/register access helpers.
+export PYTHONPATH := $(abspath ../uart):$(PYTHONPATH)
+
 export COCOTB_RESOLVE_X := ZEROS
 
 VERILOG_SOURCES += \

@@ -5,6 +5,12 @@ SIM ?= verilator
 export SIM := $(SIM)
 TOPLEVEL_LANG ?= verilog
 
+# Common Python test and transactor verbosity.
+export LOG_LEVEL ?= INFO
+
+# Shared Python UART/register access helpers.
+export PYTHONPATH := $(abspath ../uart):$(PYTHONPATH)
+
 # Xilinx tools
 # Env variable: XILINX_VIVADO=/tools/Xilinx/Vivado/2023.2
 # make sure XILINX_VIVADO is set

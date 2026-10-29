@@ -47,21 +47,22 @@ class ApbRamTransactor:
 class UartTransactor:
     def __init__(self, dut):
         self.dut = dut
+        log_level = os.environ["LOG_LEVEL"]
         self.log = logging.getLogger("UART Transactor")
-        self.log.setLevel(self.dut._log.level)
+        self.log.setLevel(log_level)
 
         self.uart_source = UartSource(dut.uart_rx, baud=115200, bits=8, stop_bits=1)
         self.uart_sink = UartSink(dut.uart_tx, baud=115200, bits=8, stop_bits=1)
 
     async def uart_write(self, address, data):
-        self.log.info(f"UART WRITE: ADDRESS=0x{address:02x} DATA=0x{data:02x}")
+        self.log.debug(f"UART WRITE: ADDRESS=0x{address:02x} DATA=0x{data:02x}")
         await self.uart_source.write(bytes([0x1, address, data]))
         await self.uart_source.wait()
 
     async def uart_cmd(self, cmd):
         assert cmd != 1
         assert cmd != 2
-        self.log.info(f"UART COMMAND: COMMAND=0x{cmd:02x} ")
+        self.log.debug(f"UART COMMAND: COMMAND=0x{cmd:02x} ")
         await self.uart_source.write(bytes([cmd]))
         await self.uart_source.wait()
 
@@ -71,13 +72,13 @@ class UartTransactor:
         await Combine(t, r)
         data = r.result()
         data = data[0] #bytearray
-        self.log.info(f"UART READ:  ADDRESS=0x{address:02x} DATA=0x{data:02x}")
+        self.log.debug(f"UART READ:  ADDRESS=0x{address:02x} DATA=0x{data:02x}")
         return data
 
 
 @cocotb.test()
 async def uart_test(dut):
-    log_level = os.environ.get('LOG_LEVEL', 'INFO') # NOTSET=0 DEBUG=10 INFO=20 WARN=30 ERROR=40 CRITICAL=50
+    log_level = os.environ["LOG_LEVEL"] # NOTSET=0 DEBUG=10 INFO=20 WARN=30 ERROR=40 CRITICAL=50
     dut._log.setLevel(log_level)
 
     # Hack/Fix for missing "negedge reset" in verilator
