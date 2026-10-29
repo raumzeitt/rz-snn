@@ -18,16 +18,19 @@ class UartTransactor(UartAccess):
 
         self.uart_source = UartSource(dut.uart_rx, baud=baud, bits=8, stop_bits=1)
         self.uart_sink = UartSink(dut.uart_tx, baud=baud, bits=8, stop_bits=1)
+        uart_level = logging.DEBUG if log_level == "DEBUG" else logging.WARNING
+        self.uart_source.log.setLevel(uart_level)
+        self.uart_sink.log.setLevel(uart_level)
 
     async def uart_write(self, address, data):
-        self.log.info(f"UART WRITE: ADDRESS=0x{address:02x} DATA=0x{data:02x}")
+        self.log.debug(f"UART WRITE: ADDRESS=0x{address:02x} DATA=0x{data:02x}")
         await self.uart_source.write(bytes([0x1, address, data]))
         await self.uart_source.wait()
 
     async def uart_cmd(self, cmd):
         assert cmd != 1
         assert cmd != 2
-        self.log.info(f"UART COMMAND: COMMAND=0x{cmd:02x} ")
+        self.log.debug(f"UART COMMAND: COMMAND=0x{cmd:02x} ")
         await self.uart_source.write(bytes([cmd]))
         await self.uart_source.wait()
 
@@ -39,6 +42,6 @@ class UartTransactor(UartAccess):
         if completed is timer:
             raise TimeoutError("UART read timeout")
         data = r.result()[0]
-        self.log.info(f"UART READ:  ADDRESS=0x{address:02x} DATA=0x{data:02x}")
+        self.log.debug(f"UART READ:  ADDRESS=0x{address:02x} DATA=0x{data:02x}")
         return data
 
