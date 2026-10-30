@@ -13,7 +13,8 @@ from math import ceil
 
 # Match the RTL clock and baud defaults; account for integer baud division.
 CLK_FREQ = int(os.environ.get("CLK_FREQ", 200_000_000))
-UART_DIVISOR = int(os.environ.get("UART_DIVISOR", CLK_FREQ / 115200))
+BAUD_RATE = int(os.environ.get("BAUD_RATE", 115200))
+UART_DIVISOR = int(os.environ.get("UART_DIVISOR", CLK_FREQ / BAUD_RATE))
 UART_BAUD = CLK_FREQ / UART_DIVISOR
 
 # pip install cocotbext-uart

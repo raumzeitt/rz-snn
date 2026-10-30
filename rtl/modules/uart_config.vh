@@ -5,7 +5,9 @@
 `define CLK_FREQ 200_000_000
 `endif
 
+`ifndef BAUD_RATE
 `define BAUD_RATE 115200
+`endif
 
 `ifndef UART_DIVISOR
 // 1736 or 868
