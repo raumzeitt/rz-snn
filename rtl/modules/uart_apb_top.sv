@@ -1,6 +1,9 @@
 /*
-READ:  [0x02][ADDR] returns [DATA]
-WRITE: [0x01][ADDR][DATA] returns [0x55]
+READ:  [(N-1)*16|0x02][ADDR] returns [N data bytes]
+WRITE: [(N-1)*16|0x01][ADDR][N data bytes]
+
+APB addresses increment after each transfer and wrap at 256.
+No RX FIFO: each write must complete before the next UART byte arrives.
 
 PC          FPGA(UART)     APB
  |               |           |
@@ -22,9 +25,7 @@ PC          FPGA(UART)     APB
  |               |--PWDATA-> |
  |               |<-READY--- |
 
-(|<--[0x55]------|           |)
- 
- */
+*/
 `include "uart_config.vh"
 
 module uart_apb_top (
@@ -51,14 +52,15 @@ logic [7:0]     rx_data;
 logic           rx_valid;
 logic [7:0]     tx_data;
 logic           tx_valid;
+logic           tx_busy;
 
-typedef enum logic[1:0] { U_IDLE, U_ADDR, U_DATA} ustate_t; 
+typedef enum logic[1:0] { U_IDLE, U_ADDR, U_DATA} ustate_t;
 typedef enum logic { U_RD=0, U_WR=1} ucmd_t; 
 
 ustate_t        ustate;
 ucmd_t          cmd;
 logic [7:0]     addr;
-logic           u_exec;
+logic [4:0]     byte_count; // Remaining bytes; zero means done
 
 typedef enum logic[1:0] {A_IDLE=0, A_SETUP=1, A_ACCESS=3} pstate_t;
 pstate_t        pstate;
@@ -91,29 +93,41 @@ txuart #(
     .i_data     (tx_data),
     .i_cts_n    (1'b0), // no flow control
     .o_uart_tx  (uart_tx),
-    .o_busy     ( )
+    .o_busy     (tx_busy)
 );  
 
 
 // UART FSM
 
 always @(posedge clk or negedge rst_n)
-if (~rst_n) 
+if (~rst_n)
     ustate      <= U_IDLE;
 else if (rx_valid)
     case (ustate)
-    U_IDLE: if (rx_data == 1 | rx_data == 2) ustate <= U_ADDR;
+    U_IDLE: if (rx_data[3:0] == 1 | rx_data[3:0] == 2) ustate <= U_ADDR;
     U_ADDR: ustate <= cmd == U_WR ? U_DATA : U_IDLE; // write/read
-    U_DATA: ustate <= U_IDLE;
+    U_DATA: if (byte_count == 0) ustate <= U_IDLE;
     default: ustate <= ustate_t'('x);
     endcase
 
-always_comb  u_exec = rx_valid & (cmd == U_WR ? ustate==U_DATA : ustate==U_ADDR);
 
 always @(posedge clk)
 if (rx_valid) begin
-    if (ustate==U_IDLE & (rx_data == 1 | rx_data == 2)) cmd <= ucmd_t'(rx_data);
-    if (ustate==U_ADDR)                                 addr <= rx_data;
+    if (ustate==U_IDLE & (rx_data[3:0] == 1 | rx_data[3:0] == 2)) cmd <= ucmd_t'(rx_data);
+end 
+
+// load count/address and update both on APB completion
+always @(posedge clk or negedge rst_n)
+if (~rst_n)
+    byte_count <= 5'b1xxxx;
+else if (rx_valid) begin
+    if (ustate==U_IDLE & (rx_data[3:0] == 1 | rx_data[3:0] == 2))
+        byte_count <= rx_data[7:4]; // Upper nibble encodes N-1
+    if (ustate==U_ADDR)
+        addr <= rx_data;
+end else if (PENABLE && PREADY) begin
+    byte_count <= byte_count - 1;
+    addr <= addr + 1;
 end
 
 // APB Master FSM
@@ -123,7 +137,7 @@ if (~rst_n)
     pstate  <= A_IDLE;
 else
     case (pstate)
-    A_IDLE: if (u_exec)  pstate <= A_SETUP;
+    A_IDLE: if (cmd==U_WR ? (ustate==U_DATA & rx_valid) : (ustate==U_IDLE & !tx_busy & ~byte_count[4])) pstate <= A_SETUP;
     A_SETUP:  pstate <= A_ACCESS;
     A_ACCESS: if(PREADY)  pstate <= A_IDLE;
     default: pstate <= pstate_t'('x);
@@ -136,5 +150,5 @@ always_comb PWDATA = rx_data;
 
 always_comb tx_valid = ~PWRITE & PENABLE & PREADY; //&PSEL
 always_comb tx_data = PRDATA;
-//always_comb tx_data = cmd==U_WR ? 8'h55 : PRDATA;
+//always_comb tx_data = PRDATA;
 endmodule

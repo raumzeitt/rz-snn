@@ -3,7 +3,7 @@
 import logging
 import os
 import cocotb
-from cocotb.triggers import First, Timer
+from cocotb.triggers import with_timeout
 from cocotbext.uart import UartSource, UartSink
 from uart_access import UartAccess
 
@@ -23,25 +23,15 @@ class UartTransactor(UartAccess):
         self.uart_sink.log.setLevel(uart_level)
 
     async def uart_write(self, address, data):
-        self.log.debug(f"UART WRITE: ADDRESS=0x{address:02x} DATA=0x{data:02x}")
-        await self.uart_source.write(bytes([0x1, address, data]))
+        self.log.debug(f"UART WRITE: ADDRESS=0x{address:02x} DATA={data.hex()}")
+        await self.uart_source.write(bytearray([((len(data)-1) << 4) | 0x1, address]) + data)
         await self.uart_source.wait()
 
-    async def uart_cmd(self, cmd):
-        assert cmd != 1
-        assert cmd != 2
-        self.log.debug(f"UART COMMAND: COMMAND=0x{cmd:02x} ")
-        await self.uart_source.write(bytes([cmd]))
-        await self.uart_source.wait()
-
-    async def uart_read(self, address):
-        t = cocotb.start_soon(self.uart_source.write(bytes([0x2, address])))  
-        r = cocotb.start_soon(self.uart_sink.read())  
-        timer = Timer(self.timeout_us, "us")
-        completed = await First(r, timer)
-        if completed is timer:
-            raise TimeoutError("UART read timeout")
-        data = r.result()[0]
-        self.log.debug(f"UART READ:  ADDRESS=0x{address:02x} DATA=0x{data:02x}")
+    async def uart_read(self, address, length=1):
+        t = cocotb.start_soon(self.uart_source.write(bytearray([((length-1) << 4) | 0x2, address])))
+        data = bytearray()
+        while len(data) < length:
+            r = await with_timeout(self.uart_sink.read(), self.timeout_us, "us")
+            data.extend(r)
+        self.log.debug(f"UART READ:  ADDRESS=0x{address:02x} DATA={data.hex()}")
         return data
-

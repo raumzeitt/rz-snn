@@ -106,7 +106,14 @@ export PYTHONPATH="$PWD/cocotb/uart${PYTHONPATH:+:$PYTHONPATH}"
 
 - `UartTransactor(dut, baud, timeout_us=1000)`: simulated UART.
 - `PcUartTransactor(port, baud=115200, timeout=1.0)`: PC serial UART.
-- Both inherit `UartAccess`: `wr32`/`rd32` use little-endian APB byte accesses;
+- UART packets use the low nibble for the command (1 write, 2 read), and the
+  high nibble for byte count minus one: `0x31` writes four bytes, `0x32` reads four.
+- `uart_write`/`uart_read` transfer 1–16 bytes at consecutive APB
+  addresses, wrapping at 256. `uart_write` accepts a byte sequence;
+  `uart_read(address, length=1)` always returns a bytearray.
+  Writes have no acknowledgement or RX FIFO; APB
+  must complete before the next payload byte arrives.
+- Both inherit `UartAccess`: `wr32`/`rd32` use one little-endian four-byte packet;
   `axi_write` transfers one word, and `axi_read` returns bytes (length in bytes,
   multiple of four). Multiple words use separate AXI transactions, not a burst.
 - `uart_access.py` defines the AXI-access base/offsets and status poll limit.

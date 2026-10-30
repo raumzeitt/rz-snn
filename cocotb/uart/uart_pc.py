@@ -10,51 +10,40 @@ Example:
 Use the hardware UART baud, not the simulation speedup baud.
 """
 
-import asyncio
+import logging
 from uart_access import UartAccess
+import serial
 
 
 class PcUartTransactor(UartAccess):
     def __init__(self, port, baud=115200, timeout=1.0):
-        import serial
-        self.serial = serial.Serial(port, baudrate=baud, timeout=timeout,
-                                    write_timeout=timeout)
-
-    async def _io(self, operation):
-        # Finish any bounded serial operation before recovery can reuse the port.
-        task = asyncio.create_task(asyncio.to_thread(operation))
-        try:
-            return await asyncio.shield(task)
-        except asyncio.CancelledError:
-            try:
-                await asyncio.shield(task)
-            except Exception:
-                pass
-            raise
-
-    def _send(self, packet):
-        if self.serial.write(packet) != len(packet):
-            raise TimeoutError("Incomplete UART write")
-        self.serial.flush()
+        self.log = logging.getLogger("UART")
+        # pySerial UART port (e.g. /dev/ttyUSB0 or COM3), often USB-to-UART; defaults to 8N1.
+        self.serial = serial.Serial(port, baudrate=baud, timeout=timeout, write_timeout=timeout)
 
     async def uart_write(self, address, data):
-        await self._io(lambda: self._send(bytes([0x01, address, data])))
+        self.log.debug(f"UART WRITE: ADDRESS=0x{address:02x} DATA={data.hex()}")
+        # UART wr packet: command byte, address byte, then write data.
+        self.serial.write(bytearray([((len(data)-1) << 4) | 0x01, address]) + data)
+        self.serial.flush()  # waits until the outgoing bytes have been transmitted.
 
-    async def uart_read(self, address):
-        def read():
-            self._send(bytes([0x02, address]))
-            data = self.serial.read(1)
-            if len(data) != 1:
+    async def uart_read(self, address, length=1):
+        # UART rd packet: command byte, address byte
+        self.serial.write(bytearray([((length-1) << 4) | 0x02, address]))
+        self.serial.flush()  # waits until the outgoing bytes have been transmitted.
+        data = bytearray()
+        while len(data) < length:
+            r = self.serial.read(length - len(data))
+            if not r:
                 raise TimeoutError("UART read timeout")
-            return data[0]
-        return await self._io(read)
+            data.extend(r)
+        self.log.debug(f"UART READ:  ADDRESS=0x{address:02x} DATA={data.hex()}")
+        return data
 
     async def clear(self):
         """Flush host buffers after external hardware recovery; does not reset RTL."""
-        def clear():
-            self.serial.reset_input_buffer()
-            self.serial.reset_output_buffer()
-        await self._io(clear)
+        self.serial.reset_input_buffer()
+        self.serial.reset_output_buffer()
 
     async def close(self):
-        await self._io(self.serial.close)
+        self.serial.close()
